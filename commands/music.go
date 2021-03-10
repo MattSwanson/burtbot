@@ -38,6 +38,7 @@ func (m *Music) Init() {
 
 	m.SpotifyClient = <-spotifyAuthCh
 
+	fmt.Println("Awating Spotify authentication...")
 	user, err := m.SpotifyClient.CurrentUser()
 	if err != nil {
 		log.Fatal(err)
