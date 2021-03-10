@@ -33,10 +33,8 @@ var spotifyState = "test123"
 func (m *Music) Init() {
 
 	http.HandleFunc("/spotify_authcb", completeAuth)
+	http.HandleFunc("/spotify_link", getSpotifyLink)
 	go http.ListenAndServe(":8079", nil)
-
-	url := spotifyAuth.AuthURL(spotifyState)
-	fmt.Println("Auth url for spotify: ", url)
 
 	m.SpotifyClient = <-spotifyAuthCh
 
@@ -279,4 +277,15 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 	client := spotifyAuth.NewClient(tok)
 	fmt.Fprintf(w, "Login completed!")
 	spotifyAuthCh <- &client
+}
+
+func getSpotifyLink(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.NotFoundHandler()
+		return
+	}
+	url := spotifyAuth.AuthURL(spotifyState)
+	fmt.Println("Auth url for spotify: ", url)
+	fmt.Fprintf(w, `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>SpotAuth</title></head><body>Auth URL: <a href="%s">here</a></body></html>`, url)
+	return
 }
