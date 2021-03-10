@@ -25,7 +25,11 @@ const (
 	blue  int = 46920
 )
 
-func (l Lights) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (l *Lights) Init() {
+
+}
+
+func (l *Lights) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	// !lights red or !lights 5500
 	if lightLock {
 		return

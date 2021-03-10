@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -15,11 +16,51 @@ import (
 type Music struct {
 	SpotifyClient *spotify.Client
 	Tokens        map[string]int
-	Persist       bool
+	persist       bool
 }
 
 const skipCost = 5       //tokens
 const previousCost = 100 //tokens
+
+var spotifyAuth = spotify.NewAuthenticator("http://localhost:8079/spotify_authcb",
+	spotify.ScopeUserReadPrivate,
+	spotify.ScopeUserReadCurrentlyPlaying,
+	spotify.ScopeUserReadRecentlyPlayed,
+	spotify.ScopeUserModifyPlaybackState)
+var spotifyAuthCh = make(chan *spotify.Client)
+var spotifyState = "test123"
+
+func (m *Music) Init() {
+
+	http.HandleFunc("/spotify_authcb", completeAuth)
+	go http.ListenAndServe(":8079", nil)
+
+	url := spotifyAuth.AuthURL(spotifyState)
+	fmt.Println("Auth url for spotify: ", url)
+
+	m.SpotifyClient = <-spotifyAuthCh
+
+	user, err := m.SpotifyClient.CurrentUser()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Logged in to Spotify as: ", user.ID)
+
+	// tokens init
+	m.Tokens = make(map[string]int)
+	m.persist = true
+	j, err := os.ReadFile("./tokens.json")
+	if err != nil {
+		log.Println("Couldn't load token info from file")
+		m.persist = false
+	} else {
+		err = json.Unmarshal(j, &m.Tokens)
+		if err != nil {
+			log.Println("Invalid json in tokens file")
+			m.persist = false
+		}
+	}
+}
 
 func (m *Music) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 
@@ -116,7 +157,7 @@ func (m *Music) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			return
 		}
 
-		m.setTokenCount(msg.User, m.getTokenCount(msg.User)-skipCost)
+		m.setTokenCount(msg.User.DisplayName, m.getTokenCount(msg.User)-skipCost)
 		plural := ""
 		if m.getTokenCount(msg.User) > 1 {
 			plural = "s"
@@ -144,7 +185,7 @@ func (m *Music) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			return
 		}
 
-		m.setTokenCount(msg.User, m.getTokenCount(msg.User)-previousCost)
+		m.setTokenCount(msg.User.DisplayName, m.getTokenCount(msg.User)-previousCost)
 		plural := ""
 		if m.getTokenCount(msg.User) > 1 {
 			plural = "s"
@@ -161,7 +202,7 @@ func (m *Music) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 
 func (m Music) grantToken(username string, number int) {
 	m.Tokens[username] += number
-	if m.Persist {
+	if m.persist {
 		m.saveTokensToFile()
 	}
 }
@@ -178,7 +219,7 @@ func (m Music) request(user twitch.User, song spotify.ID) (bool, string) {
 	}
 
 	m.Tokens[strings.ToLower(user.Name)]--
-	if m.Persist {
+	if m.persist {
 		m.saveTokensToFile()
 	}
 
@@ -206,8 +247,11 @@ func (m Music) getTokenCount(user twitch.User) int {
 	return m.Tokens[username]
 }
 
-func (m Music) setTokenCount(user twitch.User, number int) {
-	m.Tokens[strings.ToLower(user.Name)] = number
+func (m *Music) setTokenCount(userName string, number int) {
+	m.Tokens[userName] = number
+	if m.persist {
+		m.saveTokensToFile()
+	}
 }
 
 func (m Music) saveTokensToFile() {
@@ -219,4 +263,20 @@ func (m Music) saveTokensToFile() {
 	if err := os.WriteFile("./tokens.json", json, 0644); err != nil {
 		log.Println(err.Error())
 	}
+}
+
+func completeAuth(w http.ResponseWriter, r *http.Request) {
+	tok, err := spotifyAuth.Token(spotifyState, r)
+	if err != nil {
+		http.Error(w, "Couldn't get token", http.StatusForbidden)
+		log.Fatal(err)
+	}
+	if st := r.FormValue("state"); st != spotifyState {
+		http.NotFound(w, r)
+		log.Fatalf("State mismatch: %s != %s\n", st, spotifyState)
+	}
+	// use the token to get an authenticated client
+	client := spotifyAuth.NewClient(tok)
+	fmt.Fprintf(w, "Login completed!")
+	spotifyAuthCh <- &client
 }

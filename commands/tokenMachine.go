@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -19,12 +20,18 @@ type TokenMachine struct {
 }
 
 const (
-	kickCooldown     = 120 // seconds
-	kickProbability  = 25  // %
-	tokenRate        = 4   // tokens/burtcoin
-	distractTime     = 30  // seconds
-	distractCooldown = 24  // hours
+	kickCooldown           = 120    // seconds
+	kickProbability        = 0.25   // %
+	kickJackpotProbability = 0.0001 // %
+	jackpotAmount          = 25
+	tokenRate              = 4  // tokens/burtcoin
+	distractTime           = 30 // seconds
+	distractCooldown       = 24 // hours
 )
+
+func (tm *TokenMachine) Init() {
+	rand.Seed(time.Now().Unix())
+}
 
 func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 
@@ -34,7 +41,7 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 
 		if t.attendantDistracted {
 			rand.Seed(time.Now().Unix())
-			if rand.Int()%100 >= kickProbability {
+			if rand.Float64() >= kickProbability {
 				// failed to get a token
 				client.Say(msg.Channel, fmt.Sprintf("@%s you bad at kicking machine", msg.User.DisplayName))
 				return
@@ -49,8 +56,9 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			return
 		}
 		t.lastKick = time.Now()
-		rand.Seed(time.Now().Unix())
-		if rand.Int()%100 >= kickProbability {
+
+		r := rand.Float64()
+		if r >= kickProbability {
 			// failed to get a token
 			client.Say(msg.Channel, "You kick the token machine but nothing happens.")
 			client.Say(msg.Channel, "The Attendant comes to investigate the noise.")
@@ -58,8 +66,15 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			return
 		}
 
+		if r < kickJackpotProbability {
+			t.Music.grantToken(strings.ToLower(msg.User.Name), jackpotAmount)
+			client.Say(msg.Channel, fmt.Sprintf("WOW! @%s kicks the token machine and %d tokens fall from it's orifices.", msg.User.DisplayName, jackpotAmount))
+			client.Say(msg.Channel, "They grab their bounty from the floor quickly and get away before The Attendent rushes over.")
+			return
+		}
+
 		t.Music.grantToken(strings.ToLower(msg.User.Name), 1)
-		client.Say(msg.Channel, "You kick the token machine and token falls into the tray.")
+		client.Say(msg.Channel, "You kick the token machine and a token falls into the tray.")
 		client.Say(msg.Channel, "As you grab the token you notice the Attendant coming.")
 		client.Say(msg.Channel, "You escape into the shadows with your request token.")
 		return
@@ -76,7 +91,7 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		}
 		t.lastDistract = time.Now()
 		t.attendantDistracted = true
-		t.Music.setTokenCount(msg.User, t.Music.getTokenCount(msg.User)-1)
+		t.Music.setTokenCount(msg.User.DisplayName, t.Music.getTokenCount(msg.User)-1)
 		client.Say(msg.Channel, fmt.Sprintf("@%s throws a token into the back hallway.", msg.User.DisplayName))
 		client.Say(msg.Channel, "The Attendant goes off to investigate the noise.")
 		client.Say(msg.Channel, "Quick! The token machine is unattended, now would be a good check to try and get free tokens!")
@@ -133,5 +148,17 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			plural = "s"
 		}
 		client.Say(msg.Channel, fmt.Sprintf(`@%s, you have %d token%s. Use them wisely. Or not.`, msg.User.Name, n, plural))
+	}
+
+	if args[1] == "set" {
+		if !isMod(msg.User) || len(args) < 4 {
+			return
+		}
+		n, err := strconv.Atoi(args[3])
+		if err != nil {
+			log.Println("error converting to int - ", err.Error())
+			return
+		}
+		t.Music.setTokenCount(args[2], n)
 	}
 }

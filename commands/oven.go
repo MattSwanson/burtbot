@@ -22,6 +22,10 @@ type food struct {
 	Coductivity float64 // how quickly the food will cook
 }
 
+func (o *Oven) Init() {
+
+}
+
 func (o *Oven) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
 	if len(args) < 2 {

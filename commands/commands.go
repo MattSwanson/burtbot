@@ -13,6 +13,7 @@ import (
 
 type Command interface {
 	Run(*twitch.Client, twitch.PrivateMessage)
+	Init()
 }
 
 type CmdHandler struct {

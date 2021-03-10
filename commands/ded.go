@@ -21,7 +21,11 @@ type counter struct {
 var cooldown int = 15
 var locked = false
 
-func (d Ded) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (d *Ded) Init() {
+
+}
+
+func (d *Ded) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	if locked && !isMod(msg.User) {
 		return
 	}

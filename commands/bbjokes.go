@@ -22,6 +22,10 @@ type apiResponse struct {
 var jokeLock bool = false
 var jokeCD int = 180 // seconds
 
+func (j *Joke) Init() {
+
+}
+
 func (j Joke) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	if jokeLock && !isMod(msg.User) {
 		return

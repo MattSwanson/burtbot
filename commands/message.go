@@ -11,6 +11,10 @@ import (
 
 type Msg struct{}
 
+func (m *Msg) Init() {
+
+}
+
 func (m Msg) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	if !isMod(msg.User) {
 		return
