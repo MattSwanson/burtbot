@@ -114,7 +114,7 @@ func (m *Music) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	}
 
 	if args[1] == "grant" {
-		if !isMod(msg.User) || len(args) < 3 {
+		if !isMod(msg.User) || len(args) < 4 {
 			return
 		}
 		var numberTokens int
@@ -197,6 +197,38 @@ func (m *Music) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		}
 		return
 	}
+}
+
+func (m *Music) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
+	return
+}
+
+func (m *Music) getCurrentTrackTitle() (string, bool) {
+	cp, err := m.SpotifyClient.PlayerCurrentlyPlaying()
+	if err != nil {
+		return "", false
+	}
+	return cp.Item.Name, true
+}
+
+func (m *Music) getCurrentTrackArtists() ([]string, bool) {
+	cp, err := m.SpotifyClient.PlayerCurrentlyPlaying()
+	if err != nil {
+		return []string{}, false
+	}
+	artists := []string{}
+	for _, artist := range cp.Item.Artists {
+		artists = append(artists, artist.Name)
+	}
+	return artists, true
+}
+
+func (m *Music) getCurrentTrackID() (string, bool) {
+	cp, err := m.SpotifyClient.PlayerCurrentlyPlaying()
+	if err != nil {
+		return "", false
+	}
+	return string(cp.Item.ID.String()), true
 }
 
 func (m Music) grantToken(username string, number int) {

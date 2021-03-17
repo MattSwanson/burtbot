@@ -85,6 +85,10 @@ func (d *Ded) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	}
 }
 
+func (d *Ded) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
+	return
+}
+
 func unlock() {
 	time.Sleep(time.Second * time.Duration(cooldown))
 	locked = false

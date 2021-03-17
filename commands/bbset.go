@@ -79,7 +79,7 @@ func (b *Bbset) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	}
 }
 
-func (b Bbset) HandleMsg(client *twitch.Client, msg twitch.PrivateMessage) {
+func (b *Bbset) HandleMsg(client *twitch.Client, msg twitch.PrivateMessage) {
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
 	if len(args) > 1 {
 		return
@@ -87,6 +87,10 @@ func (b Bbset) HandleMsg(client *twitch.Client, msg twitch.PrivateMessage) {
 	if txt, ok := b.commands[args[0]]; ok {
 		client.Say(msg.Channel, txt)
 	}
+}
+
+func (b *Bbset) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
+	return
 }
 
 func (b Bbset) saveCommandsToFile() {

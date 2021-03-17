@@ -86,3 +86,7 @@ func (l *Lights) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		lightLock = false
 	}()
 }
+
+func (l *Lights) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
+	return
+}

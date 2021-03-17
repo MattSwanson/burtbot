@@ -15,7 +15,7 @@ func (m *Msg) Init() {
 
 }
 
-func (m Msg) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (m *Msg) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	if !isMod(msg.User) {
 		return
 	}
@@ -31,4 +31,8 @@ func (m Msg) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		log.Println(err.Error())
 		return
 	}
+}
+
+func (m *Msg) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
+	return
 }

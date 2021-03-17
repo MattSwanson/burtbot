@@ -11,7 +11,10 @@ import (
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
-type Joke struct{}
+type Joke struct {
+	jokeMode     bool
+	jokeModeStop chan bool
+}
 
 type apiResponse struct {
 	ID     string `json:"id"`
@@ -23,10 +26,11 @@ var jokeLock bool = false
 var jokeCD int = 180 // seconds
 
 func (j *Joke) Init() {
-
+	j.jokeModeStop = make(chan bool)
+	j.jokeMode = false
 }
 
-func (j Joke) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (j *Joke) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	if jokeLock && !isMod(msg.User) {
 		return
 	}
@@ -34,6 +38,43 @@ func (j Joke) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		jokeLock = true
 		go unlockJoke()
 	}
+	args := strings.Fields(strings.ToLower(strings.TrimPrefix(msg.Message, "!")))
+	if len(args) == 1 {
+		j.TellJoke(client, msg)
+		return
+	}
+
+	if args[1] == "mode" && isMod(msg.User) {
+		if len(args) < 3 {
+			return
+		}
+		// start
+		if args[2] == "start" && !j.jokeMode {
+			client.Say(msg.Channel, "Initiating joke mode - prepare for copious amounts of laughter.")
+			j.JokeMode(client, msg)
+		}
+		// stop
+		if args[2] == "stop" && j.jokeMode {
+			client.Say(msg.Channel, "Ending joke mode - try to stop laughing now.")
+			j.jokeModeStop <- true
+		}
+	}
+}
+
+func (j *Joke) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
+	return
+}
+
+func unlockJoke() {
+	time.Sleep(time.Second * time.Duration(jokeCD))
+	jokeLock = false
+}
+
+func manualUnlock() {
+
+}
+
+func (j *Joke) TellJoke(client *twitch.Client, msg twitch.PrivateMessage) {
 	// Fetch a joke from icanhazdadjoke api
 	req, err := http.NewRequest("GET", "https://icanhazdadjoke.com", nil)
 	if err != nil {
@@ -71,11 +112,18 @@ func (j Joke) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 
 }
 
-func unlockJoke() {
-	time.Sleep(time.Second * time.Duration(jokeCD))
-	jokeLock = false
-}
-
-func manualUnlock() {
-
+func (j *Joke) JokeMode(client *twitch.Client, msg twitch.PrivateMessage) {
+	j.jokeMode = true
+	go func() {
+		for {
+			select {
+			case <-j.jokeModeStop:
+				j.jokeMode = false
+				return
+			default:
+				j.TellJoke(client, msg)
+				time.Sleep(time.Second * 10)
+			}
+		}
+	}()
 }

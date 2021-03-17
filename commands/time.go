@@ -17,3 +17,7 @@ func (t Tim) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	ctime := time.Now().Unix()
 	client.Say(msg.Channel, fmt.Sprintf("The time is now %d", ctime))
 }
+
+func (t *Tim) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
+	return
+}

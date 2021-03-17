@@ -14,6 +14,7 @@ import (
 type Command interface {
 	Run(*twitch.Client, twitch.PrivateMessage)
 	Init()
+	OnUserPart(*twitch.Client, twitch.UserPartMessage)
 }
 
 type CmdHandler struct {
@@ -48,6 +49,13 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 	lcmd := strings.ToLower(args[0])
 	if cmd, ok := handler.Commands[lcmd]; ok {
 		go cmd.Run(handler.Client, msg)
+	}
+}
+
+func (handler *CmdHandler) HandlePartMsg(msg twitch.UserPartMessage) {
+	// notify any commands that require it - that a user has parted the channel
+	for _, command := range handler.Commands {
+		command.OnUserPart(handler.Client, msg)
 	}
 }
 

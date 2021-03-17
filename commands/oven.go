@@ -53,6 +53,10 @@ func (o *Oven) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	}
 }
 
+func (o *Oven) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
+	return
+}
+
 func (o *Oven) Preheat(temp int) {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()

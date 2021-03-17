@@ -121,13 +121,13 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			client.Say(msg.Channel, fmt.Sprintf("@%s, you don't have any burtcoins with which to buy tokens.", msg.User.Name))
 			return
 		}
-		if amount/tokenRate > bcBalance {
+		if float64(amount)/float64(tokenRate) > bcBalance {
 			client.Say(msg.Channel, fmt.Sprintf("@%s, you don't have enough burtcoins to buy %d tokens.", msg.User.Name, amount))
 			client.Say(msg.Channel, fmt.Sprintf("@%s, you have %d. Need %d.", msg.User.Name, bcBalance, amount/tokenRate))
 			return
 		}
 
-		if t.BurtCoin.Deduct(msg.User, amount/tokenRate) {
+		if t.BurtCoin.Deduct(msg.User, float64(amount)/float64(tokenRate)) {
 			t.Music.grantToken(strings.ToLower(msg.User.Name), amount)
 			client.Say(msg.Channel, fmt.Sprintf("@%s, you received %d tokens for %d burtcoin. Thanks!", msg.User.DisplayName, amount, amount/tokenRate))
 		} else {
@@ -161,4 +161,8 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		}
 		t.Music.setTokenCount(args[2], n)
 	}
+}
+
+func (t *TokenMachine) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
+	return
 }
