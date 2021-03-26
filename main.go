@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bufio"
+	"context"
 	"fmt"
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -23,10 +26,12 @@ var schlorpLock = false
 var schlorpCD = 10
 
 var commChannel chan string
+var readChannel chan string
 
 func main() {
 
 	commChannel = make(chan string)
+	readChannel = make(chan string)
 	go connectToOverlay()
 
 	client = twitch.NewClient("burtbot11", os.Getenv("BURTBOT_TWITCH_KEY"))
@@ -43,13 +48,14 @@ func main() {
 	handler.RegisterCommand("nonillion", commands.Nonillion{})
 	handler.RegisterCommand("ded", &commands.Ded{})
 	handler.RegisterCommand("oven", &commands.Oven{Temperature: 65, BakeTemp: 0})
-	handler.RegisterCommand("bbmsg", &commands.Msg{})
+	handler.RegisterCommand("bbmsg", &commands.Msg{TcpChannel: commChannel})
 
-	jokes := commands.Joke{}
+	jokes := commands.Joke{TcpChannel: commChannel}
 	jokes.Init()
 	handler.RegisterCommand("joke", &jokes)
 	handler.RegisterCommand("lights", &commands.Lights{})
 	handler.RegisterCommand("time", &commands.Tim{})
+	handler.RegisterCommand("sb", &commands.SuggestionBox{})
 
 	burtCoin := commands.BurtCoin{}
 	burtCoin.Init()
@@ -74,6 +80,22 @@ func main() {
 	goph := commands.Gopher{TcpChannel: commChannel}
 	handler.RegisterCommand("go", &goph)
 
+	bigMouse := commands.BigMouse{TcpChannel: commChannel}
+	handler.RegisterCommand("bigmouse", &bigMouse)
+
+	snake := commands.Snake{TcpChannel: commChannel}
+	handler.RegisterCommand("snake", &snake)
+
+	marquee := commands.Marquee{TcpChannel: commChannel}
+	handler.RegisterCommand("marquee", &marquee)
+
+	handler.RegisterCommand("so", &commands.Shoutout{TcpChannel: commChannel})
+
+	plinko := commands.Plinko{TcpChannel: commChannel, MusicManager: &musicManager}
+	handler.RegisterCommand("plinko", &plinko)
+
+	go handleResults(&plinko, &musicManager)
+
 	err := client.Connect()
 	if err != nil {
 		panic(err)
@@ -82,25 +104,17 @@ func main() {
 
 func handleMessage(msg twitch.PrivateMessage) {
 	lower := strings.ToLower(msg.Message)
-	if c := strings.Count(lower, "u"); c > 0 {
-		for i := 0; i < c; i++ {
-			commChannel <- "up"
-		}
+	if lower == "w" {
+		commChannel <- "up"
 	}
-	if c := strings.Count(lower, "d"); c > 0 {
-		for i := 0; i < c; i++ {
-			commChannel <- "down"
-		}
+	if lower == "a" {
+		commChannel <- "left"
 	}
-	if c := strings.Count(lower, "l"); c > 0 {
-		for i := 0; i < c; i++ {
-			commChannel <- "left"
-		}
+	if lower == "s" {
+		commChannel <- "down"
 	}
-	if c := strings.Count(lower, "r"); c > 0 {
-		for i := 0; i < c; i++ {
-			commChannel <- "right"
-		}
+	if lower == "d" {
+		commChannel <- "right"
 	}
 	go handler.HandleMsg(msg)
 	go bbset.HandleMsg(client, msg)
@@ -150,17 +164,65 @@ func connectToOverlay() {
 		return
 	}
 	defer conn.Close()
+	go func() {
+		getMessagesFromTCP(conn)
+	}()
+	ctx, cancelPing := context.WithCancel(context.Background())
+	pingOverlay(ctx, commChannel)
 	fmt.Println("Connected to overlay")
 	for {
 		s := <-commChannel
 		fmt.Println(s)
 		_, err := fmt.Fprintf(conn, "%s\n", s)
 		if err != nil {
-			log.Println(err)
-			time.Sleep(time.Second * 10)
+			// we know we have no connection, stop pinging until we reconnect
+			cancelPing()
+			log.Println("Lost connection to overlay... will retry in 5 sec.")
+			time.Sleep(time.Second * 5)
 			connectToOverlay()
 		}
 	}
+}
+
+func getMessagesFromTCP(conn net.Conn) {
+	scanner := bufio.NewScanner(conn)
+	for scanner.Scan() {
+		s := scanner.Text()
+		fmt.Println(s)
+		readChannel <- s
+	}
+	if err := scanner.Err(); err != nil {
+		log.Println(err)
+	}
+}
+
+func handleResults(p *commands.Plinko, m *commands.Music) {
+	for s := range readChannel {
+		args := strings.Fields(s)
+		if args[0] == "plinko" {
+			if n, err := strconv.Atoi(args[2]); err == nil {
+				m.GrantToken(strings.ToLower(p.GetPlayer().DisplayName), n)
+				client.Say("burtstanton", fmt.Sprintf("@%s won %d tokens!", p.GetPlayer().DisplayName, n))
+			}
+			p.Stop()
+		}
+	}
+}
+
+// put a ping on the comm channel every 3 seconds to make sure we still have a connection
+func pingOverlay(ctx context.Context, c chan string) {
+	go func(ctx context.Context) {
+		t := time.NewTicker(time.Second * 3)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				c <- "ping"
+			}
+		}
+	}(ctx)
 }
 
 func unlockSchlorp() {

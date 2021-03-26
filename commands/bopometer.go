@@ -28,7 +28,7 @@ type trackInfo struct {
 }
 
 const (
-	boppingWindow    = 15 // seconds
+	boppingWindow    = 25 // seconds
 	bopEndWaringTime = 5  // seconds
 )
 

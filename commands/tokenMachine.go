@@ -46,7 +46,7 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 				client.Say(msg.Channel, fmt.Sprintf("@%s you bad at kicking machine", msg.User.DisplayName))
 				return
 			}
-			t.Music.grantToken(strings.ToLower(msg.User.Name), 1)
+			t.Music.GrantToken(strings.ToLower(msg.User.Name), 1)
 			client.Say(msg.Channel, fmt.Sprintf("DING! @%s got a free token!", msg.User.DisplayName))
 			return
 		}
@@ -67,13 +67,13 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		}
 
 		if r < kickJackpotProbability {
-			t.Music.grantToken(strings.ToLower(msg.User.Name), jackpotAmount)
+			t.Music.GrantToken(strings.ToLower(msg.User.Name), jackpotAmount)
 			client.Say(msg.Channel, fmt.Sprintf("WOW! @%s kicks the token machine and %d tokens fall from it's orifices.", msg.User.DisplayName, jackpotAmount))
 			client.Say(msg.Channel, "They grab their bounty from the floor quickly and get away before The Attendent rushes over.")
 			return
 		}
 
-		t.Music.grantToken(strings.ToLower(msg.User.Name), 1)
+		t.Music.GrantToken(strings.ToLower(msg.User.Name), 1)
 		client.Say(msg.Channel, "You kick the token machine and a token falls into the tray.")
 		client.Say(msg.Channel, "As you grab the token you notice the Attendant coming.")
 		client.Say(msg.Channel, "You escape into the shadows with your request token.")
@@ -128,7 +128,7 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		}
 
 		if t.BurtCoin.Deduct(msg.User, float64(amount)/float64(tokenRate)) {
-			t.Music.grantToken(strings.ToLower(msg.User.Name), amount)
+			t.Music.GrantToken(strings.ToLower(msg.User.Name), amount)
 			client.Say(msg.Channel, fmt.Sprintf("@%s, you received %d tokens for %d burtcoin. Thanks!", msg.User.DisplayName, amount, amount/tokenRate))
 		} else {
 			client.Say(msg.Channel, fmt.Sprintf("@%s, unable to deduct funds from you burtcoin wallet. No tokens for you. Yet...", msg.User.DisplayName))

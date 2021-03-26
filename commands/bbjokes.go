@@ -2,9 +2,9 @@ package commands
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -12,6 +12,7 @@ import (
 )
 
 type Joke struct {
+	TcpChannel   chan string
 	jokeMode     bool
 	jokeModeStop chan bool
 }
@@ -23,7 +24,7 @@ type apiResponse struct {
 }
 
 var jokeLock bool = false
-var jokeCD int = 180 // seconds
+var jokeCD int = 30 // seconds
 
 func (j *Joke) Init() {
 	j.jokeModeStop = make(chan bool)
@@ -98,12 +99,9 @@ func (j *Joke) TellJoke(client *twitch.Client, msg twitch.PrivateMessage) {
 		return
 	}
 
-	// send the joke to the message speaker
-	_, err = http.PostForm("http://localhost:8080/sendMessage", url.Values{"message": {r.Joke}})
-	if err != nil {
-		log.Println(err.Error())
-		client.Say(msg.Channel, "I'm having trouble speaking but...")
-	}
+	stripped := strings.ReplaceAll(r.Joke, "\n", " ")
+	j.TcpChannel <- fmt.Sprintf("tts %s", stripped)
+
 	// Some jokes have \r\n in them - I think we need to filter those out
 	jokes := strings.Split(r.Joke, "\n")
 	for _, joke := range jokes {

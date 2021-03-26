@@ -125,7 +125,7 @@ func (m *Music) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		}
 		// no validation for twitch users here - but we will save and fetch them in all lowercase
 		username := strings.ToLower(args[2])
-		m.grantToken(username, numberTokens)
+		m.GrantToken(username, numberTokens)
 		return
 	}
 
@@ -231,7 +231,7 @@ func (m *Music) getCurrentTrackID() (string, bool) {
 	return string(cp.Item.ID.String()), true
 }
 
-func (m Music) grantToken(username string, number int) {
+func (m Music) GrantToken(username string, number int) {
 	m.Tokens[username] += number
 	if m.persist {
 		m.saveTokensToFile()
@@ -318,7 +318,7 @@ func getSpotifyLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	url := spotifyAuth.AuthURL(spotifyState)
-	fmt.Println("Auth url for spotify: ", url)
+	//fmt.Println("Auth url for spotify: ", url)
 	fmt.Fprintf(w, `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>SpotAuth</title></head><body>Auth URL: <a href="%s">here</a></body></html>`, url)
 	return
 }

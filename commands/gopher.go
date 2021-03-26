@@ -25,7 +25,7 @@ func (g *Gopher) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	}
 	if args[1] == "spawn" {
 		n := "1"
-		if len(args) == 3 {
+		if len(args) >= 3 {
 			n = args[2]
 		}
 		fmt.Println("spawn a goph")
