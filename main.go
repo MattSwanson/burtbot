@@ -202,7 +202,9 @@ func handleResults(p *commands.Plinko, m *commands.Music) {
 		if args[0] == "plinko" {
 			if n, err := strconv.Atoi(args[2]); err == nil {
 				m.GrantToken(strings.ToLower(p.GetPlayer().DisplayName), n)
-				client.Say("burtstanton", fmt.Sprintf("@%s won %d tokens!", p.GetPlayer().DisplayName, n))
+				s := fmt.Sprintf("@%s won %d tokens!", p.GetPlayer().DisplayName, n)
+				client.Say("burtstanton", s)
+				commChannel <- "marquee once " + s
 			}
 			p.Stop()
 		}
