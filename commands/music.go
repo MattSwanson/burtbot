@@ -70,6 +70,11 @@ func (m *Music) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		return
 	}
 
+	if m.SpotifyClient == nil {
+		client.Say(msg.Channel, "Not logged into Spotify. Can't user music commands right now. Tell the streamer to log in and not be a dolt.")
+		return
+	}
+
 	if args[1] == "current" {
 		cp, err := m.SpotifyClient.PlayerCurrentlyPlaying()
 		if !cp.Playing {

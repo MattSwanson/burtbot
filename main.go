@@ -62,7 +62,7 @@ func main() {
 	handler.RegisterCommand("burtcoin", &burtCoin)
 
 	musicManager := commands.Music{}
-	musicManager.Init()
+	go musicManager.Init()
 	handler.RegisterCommand("music", &musicManager)
 
 	tokenMachine := commands.TokenMachine{Music: &musicManager, BurtCoin: &burtCoin}
