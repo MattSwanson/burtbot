@@ -8,7 +8,7 @@ import (
 
 type Plinko struct {
 	TcpChannel    chan string
-	MusicManager  *Music
+	TokenMachine  *TokenMachine
 	currentPlayer *twitch.User
 }
 
@@ -23,9 +23,9 @@ func (p *Plinko) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	}
 
 	if args[1] == "start" && p.currentPlayer == nil {
-		numTokens := p.MusicManager.getTokenCount(msg.User)
+		numTokens := p.TokenMachine.getTokenCount(msg.User)
 		if numTokens >= 1 {
-			p.MusicManager.setTokenCount(msg.User.Name, numTokens-1)
+			p.TokenMachine.setTokenCount(msg.User.Name, numTokens-1)
 			p.currentPlayer = &msg.User
 			p.TcpChannel <- "plinko start " + msg.User.DisplayName
 			return

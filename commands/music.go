@@ -1,11 +1,9 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
@@ -15,8 +13,7 @@ import (
 
 type Music struct {
 	SpotifyClient *spotify.Client
-	Tokens        map[string]int
-	persist       bool
+	TokenMachine  *TokenMachine
 }
 
 const skipCost = 5       //tokens
@@ -45,20 +42,6 @@ func (m *Music) Init() {
 	}
 	fmt.Println("Logged in to Spotify as: ", user.ID)
 
-	// tokens init
-	m.Tokens = make(map[string]int)
-	m.persist = true
-	j, err := os.ReadFile("./tokens.json")
-	if err != nil {
-		log.Println("Couldn't load token info from file")
-		m.persist = false
-	} else {
-		err = json.Unmarshal(j, &m.Tokens)
-		if err != nil {
-			log.Println("Invalid json in tokens file")
-			m.persist = false
-		}
-	}
 }
 
 func (m *Music) Run(client *twitch.Client, msg twitch.PrivateMessage) {
@@ -130,7 +113,7 @@ func (m *Music) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		}
 		// no validation for twitch users here - but we will save and fetch them in all lowercase
 		username := strings.ToLower(args[2])
-		m.GrantToken(username, numberTokens)
+		m.TokenMachine.GrantToken(username, numberTokens)
 		return
 	}
 
@@ -149,7 +132,7 @@ func (m *Music) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	}
 
 	if args[1] == "skip" {
-		if m.getTokenCount(msg.User) < skipCost {
+		if m.TokenMachine.getTokenCount(msg.User) < skipCost {
 			client.Say(msg.Channel, fmt.Sprintf("@%s you don't have enough tokens to skip this song. Deal with it.", msg.User.DisplayName))
 			return
 		}
@@ -161,14 +144,14 @@ func (m *Music) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			return
 		}
 
-		m.setTokenCount(msg.User.DisplayName, m.getTokenCount(msg.User)-skipCost)
+		m.TokenMachine.setTokenCount(msg.User.DisplayName, m.TokenMachine.getTokenCount(msg.User)-skipCost)
 		plural := ""
-		if m.getTokenCount(msg.User) > 1 {
+		if m.TokenMachine.getTokenCount(msg.User) > 1 {
 			plural = "s"
 		}
 		client.Say(msg.Channel, fmt.Sprintf("Are you happy @%s? You skipped everyone's favorite song...", msg.User.DisplayName))
-		if m.getTokenCount(msg.User) > 0 {
-			client.Say(msg.Channel, fmt.Sprintf("@%s, also, you only have %d token%s left", msg.User.DisplayName, m.getTokenCount(msg.User), plural))
+		if m.TokenMachine.getTokenCount(msg.User) > 0 {
+			client.Say(msg.Channel, fmt.Sprintf("@%s, also, you only have %d token%s left", msg.User.DisplayName, m.TokenMachine.getTokenCount(msg.User), plural))
 		} else {
 			client.Say(msg.Channel, fmt.Sprintf("@%s, also, you have no tokens left. Sad.", msg.User.DisplayName))
 		}
@@ -177,7 +160,7 @@ func (m *Music) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	}
 
 	if args[1] == "previous" {
-		if m.getTokenCount(msg.User) < previousCost {
+		if m.TokenMachine.getTokenCount(msg.User) < previousCost {
 			client.Say(msg.Channel, fmt.Sprintf("@%s you don't have enough tokens to return to the past.", msg.User.DisplayName))
 			return
 		}
@@ -189,14 +172,14 @@ func (m *Music) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			return
 		}
 
-		m.setTokenCount(msg.User.DisplayName, m.getTokenCount(msg.User)-previousCost)
+		m.TokenMachine.setTokenCount(msg.User.DisplayName, m.TokenMachine.getTokenCount(msg.User)-previousCost)
 		plural := ""
-		if m.getTokenCount(msg.User) > 1 {
+		if m.TokenMachine.getTokenCount(msg.User) > 1 {
 			plural = "s"
 		}
 		client.Say(msg.Channel, fmt.Sprintf("Okay @%s, I guess we have to go back to the last song.", msg.User.DisplayName))
-		if m.getTokenCount(msg.User) > 0 {
-			client.Say(msg.Channel, fmt.Sprintf("@%s, also, you only have %d token%s left", msg.User.DisplayName, m.getTokenCount(msg.User), plural))
+		if m.TokenMachine.getTokenCount(msg.User) > 0 {
+			client.Say(msg.Channel, fmt.Sprintf("@%s, also, you only have %d token%s left", msg.User.DisplayName, m.TokenMachine.getTokenCount(msg.User), plural))
 		} else {
 			client.Say(msg.Channel, fmt.Sprintf("@%s, also, you have no tokens left. Sad.", msg.User.DisplayName))
 		}
@@ -236,16 +219,10 @@ func (m *Music) getCurrentTrackID() (string, bool) {
 	return string(cp.Item.ID.String()), true
 }
 
-func (m Music) GrantToken(username string, number int) {
-	m.Tokens[username] += number
-	if m.persist {
-		m.saveTokensToFile()
-	}
-}
-
 // Put in a request for the music player from the given user for the given song link
 func (m Music) request(user twitch.User, song spotify.ID) (bool, string) {
-	if m.getTokenCount(user) <= 0 {
+	numTokens := m.TokenMachine.getTokenCount(user)
+	if numTokens <= 0 {
 		return false, fmt.Sprintf("@%s you need a token to make a request. Get tokens from the token machine.", user.Name)
 	}
 
@@ -254,10 +231,7 @@ func (m Music) request(user twitch.User, song spotify.ID) (bool, string) {
 		return false, fmt.Sprintf("There was an error queing the song - may be an invalid track id")
 	}
 
-	m.Tokens[strings.ToLower(user.Name)]--
-	if m.persist {
-		m.saveTokensToFile()
-	}
+	m.TokenMachine.setTokenCount(user.DisplayName, numTokens-1)
 
 	trackInfo, err := m.SpotifyClient.GetTrack(song)
 	if err != nil {
@@ -274,31 +248,6 @@ func (m Music) request(user twitch.User, song spotify.ID) (bool, string) {
 		}
 	}
 	return true, fmt.Sprintf(`Added "%s" by %s to the queue.`, trackInfo.SimpleTrack.Name, artists)
-}
-
-// Get a user's current token count
-func (m Music) getTokenCount(user twitch.User) int {
-	username := strings.ToLower(user.Name)
-	// No one gets any tokens!!!!
-	return m.Tokens[username]
-}
-
-func (m *Music) setTokenCount(userName string, number int) {
-	m.Tokens[userName] = number
-	if m.persist {
-		m.saveTokensToFile()
-	}
-}
-
-func (m Music) saveTokensToFile() {
-	json, err := json.Marshal(m.Tokens)
-	if err != nil {
-		log.Println("Couldn't json")
-		return
-	}
-	if err := os.WriteFile("./tokens.json", json, 0644); err != nil {
-		log.Println(err.Error())
-	}
 }
 
 func completeAuth(w http.ResponseWriter, r *http.Request) {

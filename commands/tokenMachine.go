@@ -1,9 +1,11 @@
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -17,6 +19,8 @@ type TokenMachine struct {
 	attendantDistracted bool
 	Music               *Music
 	BurtCoin            *BurtCoin
+	Tokens              map[string]int
+	persist             bool
 }
 
 const (
@@ -31,11 +35,29 @@ const (
 
 func (tm *TokenMachine) Init() {
 	rand.Seed(time.Now().Unix())
+	// tokens init
+	tm.Tokens = make(map[string]int)
+	tm.persist = true
+	j, err := os.ReadFile("./tokens.json")
+	if err != nil {
+		log.Println("Couldn't load token info from file")
+		tm.persist = false
+	} else {
+		err = json.Unmarshal(j, &tm.Tokens)
+		if err != nil {
+			log.Println("Invalid json in tokens file")
+			tm.persist = false
+		}
+	}
 }
 
 func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
+
+	if len(args) < 2 {
+		return
+	}
 
 	if args[1] == "kick" {
 
@@ -46,7 +68,7 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 				client.Say(msg.Channel, fmt.Sprintf("@%s you bad at kicking machine", msg.User.DisplayName))
 				return
 			}
-			t.Music.GrantToken(strings.ToLower(msg.User.Name), 1)
+			t.GrantToken(strings.ToLower(msg.User.Name), 1)
 			client.Say(msg.Channel, fmt.Sprintf("DING! @%s got a free token!", msg.User.DisplayName))
 			return
 		}
@@ -67,13 +89,13 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		}
 
 		if r < kickJackpotProbability {
-			t.Music.GrantToken(strings.ToLower(msg.User.Name), jackpotAmount)
+			t.GrantToken(strings.ToLower(msg.User.Name), jackpotAmount)
 			client.Say(msg.Channel, fmt.Sprintf("WOW! @%s kicks the token machine and %d tokens fall from it's orifices.", msg.User.DisplayName, jackpotAmount))
 			client.Say(msg.Channel, "They grab their bounty from the floor quickly and get away before The Attendent rushes over.")
 			return
 		}
 
-		t.Music.GrantToken(strings.ToLower(msg.User.Name), 1)
+		t.GrantToken(strings.ToLower(msg.User.Name), 1)
 		client.Say(msg.Channel, "You kick the token machine and a token falls into the tray.")
 		client.Say(msg.Channel, "As you grab the token you notice the Attendant coming.")
 		client.Say(msg.Channel, "You escape into the shadows with your request token.")
@@ -81,7 +103,7 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	}
 
 	if args[1] == "distract" {
-		if t.Music.getTokenCount(msg.User) == 0 {
+		if t.getTokenCount(msg.User) == 0 {
 			client.Say(msg.Channel, fmt.Sprintf("@%s, you don't have anything to distract the Attendant with.", msg.User.DisplayName))
 			return
 		}
@@ -91,7 +113,7 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		}
 		t.lastDistract = time.Now()
 		t.attendantDistracted = true
-		t.Music.setTokenCount(msg.User.DisplayName, t.Music.getTokenCount(msg.User)-1)
+		t.setTokenCount(msg.User.DisplayName, t.getTokenCount(msg.User)-1)
 		client.Say(msg.Channel, fmt.Sprintf("@%s throws a token into the back hallway.", msg.User.DisplayName))
 		client.Say(msg.Channel, "The Attendant goes off to investigate the noise.")
 		client.Say(msg.Channel, "Quick! The token machine is unattended, now would be a good check to try and get free tokens!")
@@ -128,7 +150,7 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		}
 
 		if t.BurtCoin.Deduct(msg.User, float64(amount)/float64(tokenRate)) {
-			t.Music.GrantToken(strings.ToLower(msg.User.Name), amount)
+			t.GrantToken(strings.ToLower(msg.User.Name), amount)
 			client.Say(msg.Channel, fmt.Sprintf("@%s, you received %d tokens for %d burtcoin. Thanks!", msg.User.DisplayName, amount, amount/tokenRate))
 		} else {
 			client.Say(msg.Channel, fmt.Sprintf("@%s, unable to deduct funds from you burtcoin wallet. No tokens for you. Yet...", msg.User.DisplayName))
@@ -138,7 +160,7 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	}
 
 	if args[1] == "balance" {
-		n := t.Music.getTokenCount(msg.User)
+		n := t.getTokenCount(msg.User)
 		if n == 0 {
 			client.Say(msg.Channel, fmt.Sprintf(`@%s, Ya got NONE!`, msg.User.Name))
 			return
@@ -159,10 +181,42 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			log.Println("error converting to int - ", err.Error())
 			return
 		}
-		t.Music.setTokenCount(args[2], n)
+		t.setTokenCount(args[2], n)
 	}
 }
 
 func (t *TokenMachine) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 	return
+}
+
+func (t *TokenMachine) GrantToken(username string, number int) {
+	t.Tokens[username] += number
+	if t.persist {
+		t.saveTokensToFile()
+	}
+}
+
+func (t *TokenMachine) setTokenCount(userName string, number int) {
+	t.Tokens[strings.ToLower(userName)] = number
+	if t.persist {
+		t.saveTokensToFile()
+	}
+}
+
+func (t *TokenMachine) saveTokensToFile() {
+	json, err := json.Marshal(t.Tokens)
+	if err != nil {
+		log.Println("Couldn't json")
+		return
+	}
+	if err := os.WriteFile("./tokens.json", json, 0644); err != nil {
+		log.Println(err.Error())
+	}
+}
+
+// Get a user's current token count
+func (t *TokenMachine) getTokenCount(user twitch.User) int {
+	username := strings.ToLower(user.Name)
+	// No one gets any tokens!!!!
+	return t.Tokens[username]
 }

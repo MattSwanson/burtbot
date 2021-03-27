@@ -91,10 +91,10 @@ func main() {
 
 	handler.RegisterCommand("so", &commands.Shoutout{TcpChannel: commChannel})
 
-	plinko := commands.Plinko{TcpChannel: commChannel, MusicManager: &musicManager}
+	plinko := commands.Plinko{TcpChannel: commChannel, TokenMachine: &tokenMachine}
 	handler.RegisterCommand("plinko", &plinko)
 
-	go handleResults(&plinko, &musicManager)
+	go handleResults(&plinko, &tokenMachine)
 
 	err := client.Connect()
 	if err != nil {
@@ -196,12 +196,12 @@ func getMessagesFromTCP(conn net.Conn) {
 	}
 }
 
-func handleResults(p *commands.Plinko, m *commands.Music) {
+func handleResults(p *commands.Plinko, t *commands.TokenMachine) {
 	for s := range readChannel {
 		args := strings.Fields(s)
 		if args[0] == "plinko" {
 			if n, err := strconv.Atoi(args[2]); err == nil {
-				m.GrantToken(strings.ToLower(p.GetPlayer().DisplayName), n)
+				t.GrantToken(strings.ToLower(p.GetPlayer().DisplayName), n)
 				s := fmt.Sprintf("@%s won %d tokens!", p.GetPlayer().DisplayName, n)
 				client.Say("burtstanton", s)
 				commChannel <- "marquee once " + s
