@@ -81,7 +81,7 @@ func (b *Bbset) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 
 func (b *Bbset) HandleMsg(client *twitch.Client, msg twitch.PrivateMessage) {
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
-	if len(args) > 1 {
+	if len(args) > 1 || len(args) == 0 {
 		return
 	}
 	if txt, ok := b.commands[args[0]]; ok {

@@ -22,7 +22,7 @@ func (n *Marquee) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	if len(args) < 2 {
 		return
 	}
-	if args[1] == "set" && isMod(msg.User) {
+	if args[1] == "set" {
 		n.TcpChannel <- "marquee set " + strings.Join(args[2:], " ")
 	} else if args[1] == "once" {
 		n.TcpChannel <- "marquee once " + strings.Join(args[2:], " ")

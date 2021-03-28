@@ -1,15 +1,16 @@
 package commands
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
 type Plinko struct {
-	TcpChannel    chan string
-	TokenMachine  *TokenMachine
-	currentPlayer *twitch.User
+	TcpChannel   chan string
+	TokenMachine *TokenMachine
+	running      bool
 }
 
 func (p *Plinko) Init() {
@@ -22,43 +23,46 @@ func (p *Plinko) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		return
 	}
 
-	if args[1] == "start" && p.currentPlayer == nil {
-		numTokens := p.TokenMachine.getTokenCount(msg.User)
-		if numTokens >= 1 {
-			p.TokenMachine.setTokenCount(msg.User.Name, numTokens-1)
-			p.currentPlayer = &msg.User
-			p.TcpChannel <- "plinko start " + msg.User.DisplayName
-			return
-		}
-	}
-
-	if args[1] == "stop" && p.currentPlayer != nil {
-		if isMod(msg.User) || p.currentPlayer.DisplayName == msg.User.DisplayName {
-			p.TcpChannel <- "plinko stop"
-			p.currentPlayer = nil
-			return
-		}
-	}
-
-	if p.currentPlayer == nil || p.currentPlayer.DisplayName != msg.User.DisplayName {
+	if args[1] == "start" && !p.running {
+		p.running = true
+		p.TcpChannel <- "plinko start"
 		return
 	}
-	switch args[1] {
-	case "left":
-		p.TcpChannel <- "plinko left"
-	case "right":
-		p.TcpChannel <- "plinko right"
-	case "drop":
-		p.TcpChannel <- "plinko drop"
+
+	if args[1] == "stop" && p.running {
+		if isMod(msg.User) {
+			p.TcpChannel <- "plinko stop"
+			p.running = false
+			return
+		}
 	}
-}
 
-func (p *Plinko) ClearPlayer() {
-	p.currentPlayer = nil
-}
+	// if p.currentPlayer == nil || p.currentPlayer.DisplayName != msg.User.DisplayName {
+	// 	return
+	// }
+	// !plinko drop n username - username supplier by message not command, so len(args) = 3
+	if args[1] == "drop" && len(args) >= 3 {
+		numTokens := p.TokenMachine.getTokenCount(msg.User)
+		if numTokens <= 0 {
+			client.Say(msg.Channel, fmt.Sprintf("Sorry @%s, you have no tokens. Plinko costs 1 token per drop.", msg.User.DisplayName))
+			return
+		}
+		cost := 1
+		if args[2] == "all" && numTokens >= 5 {
+			cost = 5
+		}
+		p.TokenMachine.setTokenCount(msg.User.Name, numTokens-cost)
+		p.TcpChannel <- fmt.Sprintf("plinko drop %s %s", args[2], msg.User.DisplayName)
+	}
 
-func (p *Plinko) GetPlayer() *twitch.User {
-	return p.currentPlayer
+	// switch args[1] {
+	// // case "left":
+	// // 	p.TcpChannel <- "plinko left"
+	// // case "right":
+	// // 	p.TcpChannel <- "plinko right"
+	// case "drop":
+	// 	p.TcpChannel <- "plinko drop"
+	// }
 }
 
 func (p *Plinko) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
@@ -67,5 +71,5 @@ func (p *Plinko) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 
 func (p *Plinko) Stop() {
 	p.TcpChannel <- "plinko stop"
-	p.currentPlayer = nil
+	p.running = false
 }

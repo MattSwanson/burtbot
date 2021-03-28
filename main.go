@@ -28,6 +28,8 @@ var schlorpCD = 10
 var commChannel chan string
 var readChannel chan string
 
+var bopometer *commands.Bopometer
+
 func main() {
 
 	commChannel = make(chan string)
@@ -76,6 +78,7 @@ func main() {
 	bop := commands.Bopometer{Music: &musicManager}
 	bop.Init()
 	handler.RegisterCommand("bop", &bop)
+	bopometer = &bop
 
 	goph := commands.Gopher{TcpChannel: commChannel}
 	handler.RegisterCommand("go", &goph)
@@ -94,7 +97,7 @@ func main() {
 	plinko := commands.Plinko{TcpChannel: commChannel, TokenMachine: &tokenMachine}
 	handler.RegisterCommand("plinko", &plinko)
 
-	go handleResults(&plinko, &tokenMachine)
+	go handleResults(&plinko, &tokenMachine, &snake)
 
 	err := client.Connect()
 	if err != nil {
@@ -104,6 +107,10 @@ func main() {
 
 func handleMessage(msg twitch.PrivateMessage) {
 	lower := strings.ToLower(msg.Message)
+	if bopometer.GetBopping() {
+		bops := strings.Count(msg.Message, "BOP")
+		bopometer.AddBops(bops)
+	}
 	if lower == "w" {
 		commChannel <- "up"
 	}
@@ -178,6 +185,7 @@ func connectToOverlay() {
 			// we know we have no connection, stop pinging until we reconnect
 			cancelPing()
 			log.Println("Lost connection to overlay... will retry in 5 sec.")
+			readChannel <- "reset"
 			time.Sleep(time.Second * 5)
 			connectToOverlay()
 		}
@@ -196,16 +204,25 @@ func getMessagesFromTCP(conn net.Conn) {
 	}
 }
 
-func handleResults(p *commands.Plinko, t *commands.TokenMachine) {
+func handleResults(p *commands.Plinko, t *commands.TokenMachine, snake *commands.Snake) {
 	for s := range readChannel {
 		args := strings.Fields(s)
-		if args[0] == "plinko" {
-			if n, err := strconv.Atoi(args[2]); err == nil {
-				t.GrantToken(strings.ToLower(p.GetPlayer().DisplayName), n)
-				s := fmt.Sprintf("@%s won %d tokens!", p.GetPlayer().DisplayName, n)
+		switch args[0] {
+		case "plinko":
+			// plinko result username n
+			if n, err := strconv.Atoi(args[3]); err == nil {
+				t.GrantToken(strings.ToLower(args[2]), n)
+				plural := ""
+				if n > 1 {
+					plural = "s"
+				}
+				s := fmt.Sprintf("@%s won %d token%s!", args[2], n, plural)
 				client.Say("burtstanton", s)
 				commChannel <- "marquee once " + s
 			}
+			//p.Stop()
+		case "reset":
+			snake.SetRunning(false)
 			p.Stop()
 		}
 	}

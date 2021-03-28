@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/gempir/go-twitch-irc/v2"
@@ -27,7 +29,19 @@ func (s *Snake) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			s.TcpChannel <- "snake stop"
 			s.isRunning = false
 		}
+	} else if len(args) >= 2 && args[1] == "speed" {
+		if s.isRunning && isMod(msg.User) {
+			n, err := strconv.Atoi(args[2])
+			if err != nil {
+				return
+			}
+			s.TcpChannel <- fmt.Sprintf("snake speed %d", n)
+		}
 	}
+}
+
+func (s *Snake) SetRunning(b bool) {
+	s.isRunning = b
 }
 
 func (s *Snake) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {

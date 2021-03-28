@@ -53,6 +53,11 @@ func (b *Bopometer) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	// users get one !bop
 	// after completion display results and write the current slice to file to persist
 
+	if b.Music.SpotifyClient == nil {
+		client.Say(msg.Channel, "Not logged into Spotify. Can't user music commands right now. Tell the streamer to log in and not be a dolt.")
+		return
+	}
+
 	args := strings.Fields(strings.ToLower(strings.TrimPrefix(msg.Message, "!")))
 
 	if len(args) == 1 {
@@ -143,4 +148,12 @@ func bopTimer(c chan int) {
 			}
 		}
 	}
+}
+
+func (b *Bopometer) GetBopping() bool {
+	return b.isBopping
+}
+
+func (b *Bopometer) AddBops(n int) {
+	b.currentTrack.Rating += n
 }

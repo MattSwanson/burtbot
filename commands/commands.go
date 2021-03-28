@@ -46,6 +46,9 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 		return
 	}
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
+	if len(args) == 0 {
+		return
+	}
 	lcmd := strings.ToLower(args[0])
 	if cmd, ok := handler.Commands[lcmd]; ok {
 		go cmd.Run(handler.Client, msg)

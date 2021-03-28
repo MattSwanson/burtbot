@@ -228,7 +228,7 @@ func (m Music) request(user twitch.User, song spotify.ID) (bool, string) {
 
 	err := m.SpotifyClient.QueueSong(song)
 	if err != nil {
-		return false, fmt.Sprintf("There was an error queing the song - may be an invalid track id")
+		return false, "There was an error queing the song - may be an invalid track id"
 	}
 
 	m.TokenMachine.setTokenCount(user.DisplayName, numTokens-1)
