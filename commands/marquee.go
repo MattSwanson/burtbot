@@ -1,6 +1,9 @@
 package commands
 
 import (
+	"encoding/json"
+	"fmt"
+	"log"
 	"strings"
 
 	"github.com/gempir/go-twitch-irc/v2"
@@ -8,6 +11,11 @@ import (
 
 type Marquee struct {
 	TcpChannel chan string
+}
+
+type MarqueeMsg struct {
+	RawMessage string `json:"rawMessage"`
+	Emotes     string `json:"emotes"`
 }
 
 func (n *Marquee) Init() {
@@ -22,10 +30,24 @@ func (n *Marquee) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	if len(args) < 2 {
 		return
 	}
-	if args[1] == "set" {
-		n.TcpChannel <- "marquee set " + strings.Join(args[2:], " ")
+	// msg.Tags["emotes"]
+	fmt.Println(msg.Emotes)
+	fmt.Println(msg.Tags["emotes"])
+	mMsg := MarqueeMsg{
+		RawMessage: strings.Join(args[2:], " "),
+		Emotes:     msg.Tags["emotes"],
+	}
+	j, err := json.Marshal(mMsg)
+	if err != nil {
+		log.Println(err.Error())
+		return
+	}
+	if args[1] == "off" {
+		n.TcpChannel <- "marquee off"
+	} else if args[1] == "set" {
+		n.TcpChannel <- "marquee set " + string(j)
 	} else if args[1] == "once" {
-		n.TcpChannel <- "marquee once " + strings.Join(args[2:], " ")
+		n.TcpChannel <- "marquee once " + string(j)
 	}
 
 	/*else if args[1] == "embiggen" {

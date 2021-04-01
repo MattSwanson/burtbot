@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -218,7 +219,15 @@ func handleResults(p *commands.Plinko, t *commands.TokenMachine, snake *commands
 				}
 				s := fmt.Sprintf("@%s won %d token%s!", args[2], n, plural)
 				client.Say("burtstanton", s)
-				commChannel <- "marquee once " + s
+				mMsg := commands.MarqueeMsg{
+					RawMessage: s,
+					Emotes:     "",
+				}
+				json, err := json.Marshal(mMsg)
+				if err != nil {
+					return
+				}
+				commChannel <- "marquee once " + string(json)
 			}
 			//p.Stop()
 		case "reset":
