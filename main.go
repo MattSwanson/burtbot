@@ -2,11 +2,14 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net"
+	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -29,6 +32,19 @@ var schlorpCD = 10
 var commChannel chan string
 var readChannel chan string
 
+var twitchAuthCh chan bool
+var twitchAuth bool
+var twitchAccessToken string
+var twitchRefreshToken string
+
+type twitchAuthResp struct {
+	Access_token  string
+	Refresh_token string
+	Expires_in    int
+	Scope         []string
+	Token_type    string
+}
+
 var bopometer *commands.Bopometer
 
 func main() {
@@ -44,6 +60,9 @@ func main() {
 	client.OnConnect(func() {
 		fmt.Println("burtbot circuits activated")
 	})
+
+	twitchAuthCh = make(chan bool)
+	go initTwitchApi()
 
 	client.Join("burtstanton")
 
@@ -76,7 +95,7 @@ func main() {
 	bbset.Init()
 	handler.RegisterCommand("bbset", &bbset)
 
-	bop := commands.Bopometer{Music: &musicManager}
+	bop := commands.Bopometer{Music: &musicManager, TCPChannel: commChannel}
 	bop.Init()
 	handler.RegisterCommand("bop", &bop)
 	bopometer = &bop
@@ -98,7 +117,10 @@ func main() {
 	plinko := commands.Plinko{TcpChannel: commChannel, TokenMachine: &tokenMachine}
 	handler.RegisterCommand("plinko", &plinko)
 
-	go handleResults(&plinko, &tokenMachine, &snake)
+	tanks := commands.Tanks{TcpChannel: commChannel}
+	handler.RegisterCommand("tanks", &tanks)
+
+	go handleResults(&plinko, &tokenMachine, &snake, &tanks, &bop)
 
 	err := client.Connect()
 	if err != nil {
@@ -205,7 +227,12 @@ func getMessagesFromTCP(conn net.Conn) {
 	}
 }
 
-func handleResults(p *commands.Plinko, t *commands.TokenMachine, snake *commands.Snake) {
+func handleResults(
+	p *commands.Plinko,
+	t *commands.TokenMachine,
+	snake *commands.Snake,
+	tanks *commands.Tanks,
+	b *commands.Bopometer) {
 	for s := range readChannel {
 		args := strings.Fields(s)
 		switch args[0] {
@@ -229,10 +256,13 @@ func handleResults(p *commands.Plinko, t *commands.TokenMachine, snake *commands
 				}
 				commChannel <- "marquee once " + string(json)
 			}
-			//p.Stop()
+			//p.Stop
+		case "bop":
+			b.Results(client, args[2])
 		case "reset":
 			snake.SetRunning(false)
 			p.Stop()
+			tanks.Stop()
 		}
 	}
 }
@@ -257,4 +287,58 @@ func unlockSchlorp() {
 	time.Sleep(time.Second * time.Duration(schlorpCD))
 	schlorpLock = false
 	log.Println("schlorp unlocked")
+}
+
+func initTwitchApi() {
+	http.HandleFunc("/twitch_authcb", twitchAuthCb)
+	http.HandleFunc("/twitch_link", getTwitchAuthLink)
+	go http.ListenAndServe(":8078", nil)
+	twitchAuth = <-twitchAuthCh
+	fmt.Println("Auth'd for twitch api")
+}
+
+func twitchAuthCb(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(r.FormValue("code"))
+	code := r.FormValue("code")
+	//scope := r.FormValue("scope")
+	reqUrl := fmt.Sprintf(`https://id.twitch.tv/oauth2/token?client_id=%s&client_secret=%s&code=%s&grant_type=authorization_code&redirect_uri=http://localhost:8078/twitch_authcb`,
+		os.Getenv("BB_APP_CLIENT_ID"),
+		os.Getenv("BB_APP_SECRET"),
+		code,
+	)
+
+	resp, err := http.Post(reqUrl, "text/html", strings.NewReader(""))
+	if err != nil {
+		log.Fatal("couldn't auth twitch token", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		log.Fatal("couldn't communicate with twitch auth")
+	}
+	dec := json.NewDecoder(resp.Body)
+	respObj := twitchAuthResp{}
+	err = dec.Decode(&respObj)
+	if err != nil {
+		log.Fatal("couldn't parse twitch auth resp", err)
+	}
+	twitchAccessToken = respObj.Access_token
+	twitchRefreshToken = respObj.Refresh_token
+	fmt.Println("exp: ", respObj.Expires_in)
+	fmt.Fprintf(w, "Twitch API authd!")
+	twitchAuthCh <- true
+}
+
+func getTwitchAuthLink(w http.ResponseWriter, r *http.Request) {
+	var buf bytes.Buffer
+	buf.WriteString("https://id.twitch.tv/oauth2/authorize")
+	buf.WriteByte('?')
+	v := url.Values{
+		"client_id":     {os.Getenv("BB_APP_CLIENT_ID")},
+		"redirect_uri":  {"http://localhost:8078/twitch_authcb"},
+		"response_type": {"code"},
+		"scope":         {"user:read:email"},
+	}
+	buf.WriteString(v.Encode())
+	fmt.Fprintf(w, `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>TwiAuth</title></head><body>Auth URL: <a href="%s">here</a></body></html>`, buf.String())
+	//https://id.twitch.tv/oauth2/authorize?client_id=zhgfvgffwkw9rf7ercx0vvf4b3d55o&redirect_uri=http%3A%2F%2Flocalhost%3A8078%2Ftwitch_authcb&response_type=code&scope=user%3Aread%3Aemail
 }

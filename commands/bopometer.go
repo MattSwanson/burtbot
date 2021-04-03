@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 // here lies the bopometer...
 type Bopometer struct {
 	Music        *Music
+	TCPChannel   chan string
 	ratings      map[string]trackInfo // key is spotify track id
 	currentTrack trackInfo
 	hasBopped    map[string]bool // usernames
@@ -21,10 +23,10 @@ type Bopometer struct {
 }
 
 type trackInfo struct {
-	//ID      string //spotify track id
+	ID      string //spotify track id
 	Name    string
 	Artists []string
-	Rating  int
+	Rating  float32
 }
 
 const (
@@ -41,7 +43,7 @@ func (b *Bopometer) Init() {
 	} else {
 		err = json.Unmarshal(j, &b.ratings)
 		if err != nil {
-			log.Println("Invalid json in tokens file")
+			log.Println("Invalid json in bops file")
 		}
 	}
 }
@@ -75,7 +77,8 @@ func (b *Bopometer) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			client.Say(msg.Channel, fmt.Sprintf("BOP BOP BOP @%s has started the bopometer! Type !bop to bop", msg.User.DisplayName))
 			artists, _ := b.Music.getCurrentTrackArtists()
 			song, _ := b.Music.getCurrentTrackTitle()
-			b.currentTrack = trackInfo{Name: song, Artists: artists, Rating: 1}
+			b.currentTrack = trackInfo{Name: song, Artists: artists, Rating: 1, ID: trackID}
+			b.TCPChannel <- "bop start"
 			c := make(chan int)
 			go func(chan int) {
 				client.Say(msg.Channel, fmt.Sprintf("Bopping has %d seconds left! !bop away!", <-c))
@@ -83,18 +86,8 @@ func (b *Bopometer) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			go func(chan int) {
 				bopTimer(c)
 				client.Say(msg.Channel, "Bopping has concluded.")
-				if track, exists := b.ratings[trackID]; exists {
-					if b.currentTrack.Rating > track.Rating {
-						client.Say(msg.Channel, fmt.Sprintf("%s has set a new record of %d BOPs!", track.Name, b.currentTrack.Rating))
-						b.ratings[trackID] = b.currentTrack
-					}
-				} else {
-					client.Say(msg.Channel, fmt.Sprintf("%s received a total of %d BOPs", b.currentTrack.Name, b.currentTrack.Rating))
-					b.ratings[trackID] = b.currentTrack
-				}
+				b.TCPChannel <- "bop stop"
 				b.isBopping = false
-				b.hasBopped = map[string]bool{}
-				b.saveRatingsToFile()
 			}(c)
 		} else {
 			// already bopping add to the bopping until bopping is complete. bopping
@@ -155,5 +148,25 @@ func (b *Bopometer) GetBopping() bool {
 }
 
 func (b *Bopometer) AddBops(n int) {
-	b.currentTrack.Rating += n
+	//b.currentTrack.Rating += n
+	b.TCPChannel <- fmt.Sprintf("bop add %d", n)
+}
+
+func (b *Bopometer) Results(client *twitch.Client, rating string) {
+	res, err := strconv.ParseFloat(rating, 32)
+	if err != nil {
+		log.Println("invalid bop result from overlay", err)
+	}
+	b.currentTrack.Rating = float32(res)
+	if track, exists := b.ratings[b.currentTrack.ID]; exists {
+		if b.currentTrack.Rating > track.Rating {
+			client.Say("burtstanton", fmt.Sprintf("%s has set a new record with a %.2f rating on the Bopometer!", track.Name, b.currentTrack.Rating))
+			b.ratings[b.currentTrack.ID] = b.currentTrack
+		}
+	} else {
+		client.Say("burtstanton", fmt.Sprintf("%s registered a rating of %.2f on the Bopometer!", b.currentTrack.Name, b.currentTrack.Rating))
+		b.ratings[b.currentTrack.ID] = b.currentTrack
+	}
+	b.hasBopped = map[string]bool{}
+	b.saveRatingsToFile()
 }
