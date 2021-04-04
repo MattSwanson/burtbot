@@ -340,5 +340,4 @@ func getTwitchAuthLink(w http.ResponseWriter, r *http.Request) {
 	}
 	buf.WriteString(v.Encode())
 	fmt.Fprintf(w, `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>TwiAuth</title></head><body>Auth URL: <a href="%s">here</a></body></html>`, buf.String())
-	//https://id.twitch.tv/oauth2/authorize?client_id=zhgfvgffwkw9rf7ercx0vvf4b3d55o&redirect_uri=http%3A%2F%2Flocalhost%3A8078%2Ftwitch_authcb&response_type=code&scope=user%3Aread%3Aemail
 }
