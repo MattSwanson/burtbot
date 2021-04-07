@@ -10,6 +10,7 @@ import (
 
 type Tanks struct {
 	TcpChannel     chan string
+	TwitchClient   *TwitchAuthClient
 	running        bool
 	currentPlayers []twitch.User
 }
@@ -30,7 +31,8 @@ func (t *Tanks) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		t.TcpChannel <- "tanks stop"
 		t.running = false
 	} else if args[1] == "join" && t.running {
-		t.TcpChannel <- "tanks join " + msg.User.DisplayName
+		u := t.TwitchClient.GetUser(msg.User.Name)
+		t.TcpChannel <- fmt.Sprintf("tanks join %s %s", msg.User.DisplayName, u.ProfileImgURL)
 	} else if args[1] == "reset" && t.running && isMod(msg.User) {
 		t.TcpChannel <- "tanks reset"
 	} else if args[1] == "shoot" && t.running {
