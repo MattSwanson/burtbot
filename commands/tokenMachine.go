@@ -17,7 +17,6 @@ type TokenMachine struct {
 	lastKick            time.Time
 	lastDistract        time.Time
 	attendantDistracted bool
-	Music               *Music
 	BurtCoin            *BurtCoin
 	Tokens              map[string]int
 	persist             bool
@@ -190,7 +189,10 @@ func (t *TokenMachine) OnUserPart(client *twitch.Client, msg twitch.UserPartMess
 }
 
 func (t *TokenMachine) GrantToken(username string, number int) {
-	t.Tokens[username] += number
+	if _, ok := t.Tokens[username]; ok {
+		t.Tokens[username] += number
+	}
+	t.Tokens[username] = number
 	if t.persist {
 		t.saveTokensToFile()
 	}
