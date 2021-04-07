@@ -239,12 +239,6 @@ func eventSubCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Println(r.Header.Get("Twitch-Eventsub-Message-Type"))
-	// dec := json.NewDecoder(r.Body)
-	// err := dec.Decode(&respStruct)
-	// if err != nil {
-	// 	log.Println("Could not decode request body from sub callback: ", err)
-	// 	return
-	// }
 	err = json.Unmarshal(body, &respStruct)
 	if err != nil {
 		log.Println("Couldn't unmarshal response body: ", err)
@@ -256,23 +250,8 @@ func eventSubCallback(w http.ResponseWriter, r *http.Request) {
 }
 
 func validSignature(headers http.Header, bodyBytes []byte) bool {
-	//br := bufio.NewReader(r.Body)
-	// body := []byte{}
-	// _, err := br.Read(body)
-	// if err != nil && err != io.EOF {
-	// 	fmt.Println("couldn't read raw bytes from request: ", err)
-	// 	return false
-	// }
-	// body, err := ioutil.ReadAll(r.Body)
-	// if err != nil {
-	// 	log.Println("Error reading request body: ", err)
-	// 	return false
-	// }
-	// r.Body.Close()
 	hmacMsg := headers.Get("Twitch-Eventsub-Message-Id") + headers.Get("Twitch-Eventsub-Message-Timestamp") + string(bodyBytes)
 	signature := hmac.New(sha256.New, []byte("supersecretsauce"))
-	// signature.Write([]byte(r.Header.Get("Twitch-Eventsub-Message-Id")))
-	// signature.Write([]byte(r.Header.Get("Twitch-Eventsub-Message-Timestamp")))
 	signature.Write([]byte(hmacMsg))
 	exMAC := signature.Sum(nil)
 	sentSig := strings.TrimPrefix(headers.Get("Twitch-Eventsub-Message-Signature"), "sha256=")
