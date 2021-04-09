@@ -54,6 +54,8 @@ func (t *Tanks) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		}
 
 		t.TcpChannel <- fmt.Sprintf("tanks shoot %s %d %.4f", msg.User.DisplayName, angle, v)
+	} else if args[1] == "begin" {
+		t.TcpChannel <- "tanks begin"
 	}
 }
 

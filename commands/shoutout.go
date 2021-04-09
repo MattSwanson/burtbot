@@ -10,7 +10,8 @@ import (
 )
 
 type Shoutout struct {
-	TcpChannel chan string
+	TcpChannel   chan string
+	TwitchClient *TwitchAuthClient
 }
 
 func (s *Shoutout) Init() {
@@ -25,6 +26,8 @@ func (s *Shoutout) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	if len(args) < 2 {
 		return
 	}
+	u := s.TwitchClient.GetUser(args[1])
+	fmt.Println(u)
 	r := rand.Intn(100)
 	if r < 40 {
 		client.Say(msg.Channel, "Nah. Maybe some other time.")

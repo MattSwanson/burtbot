@@ -164,7 +164,7 @@ func (c *TwitchAuthClient) Subscribe(event string) {
 		Secret   string `json:"secret"`
 	}{
 		Method:   "webhook",
-		Callback: "https://b06b0e5ed0d8.ngrok.io/eventsub_cb",
+		Callback: "https://c4a5fe6d817f.ngrok.io/eventsub_cb",
 		Secret:   "supersecretsauce",
 	}
 	data := struct {
