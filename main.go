@@ -74,7 +74,9 @@ func main() {
 	handler.RegisterCommand("joke", &jokes)
 	handler.RegisterCommand("lights", &commands.Lights{})
 	handler.RegisterCommand("time", &commands.Tim{})
-	handler.RegisterCommand("sb", &commands.SuggestionBox{})
+	sb := commands.SuggestionBox{}
+	sb.Init()
+	handler.RegisterCommand("sb", &sb)
 
 	burtCoin := commands.BurtCoin{}
 	burtCoin.Init()
