@@ -164,7 +164,7 @@ func (c *TwitchAuthClient) Subscribe(event string) {
 		Secret   string `json:"secret"`
 	}{
 		Method:   "webhook",
-		Callback: "https://c4a5fe6d817f.ngrok.io/eventsub_cb",
+		Callback: os.Getenv("TWITCH_CALLBACK_URL"),
 		Secret:   "supersecretsauce",
 	}
 	data := struct {
@@ -246,7 +246,6 @@ func eventSubCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprintln(w, respStruct.Challenge)
-	fmt.Println(respStruct.Challenge)
 }
 
 func validSignature(headers http.Header, bodyBytes []byte) bool {
