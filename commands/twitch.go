@@ -14,6 +14,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/gempir/go-twitch-irc/v2"
 )
 
 var twitchAuthCh chan bool
@@ -21,6 +23,8 @@ var twitchAuth bool
 var twitchAccessToken string
 var twitchAppAccessToken string
 var twitchRefreshToken string
+var chatClient *twitch.Client
+var tokenMachine *TokenMachine
 
 type twitchAuthResp struct {
 	Access_token  string
@@ -39,16 +43,20 @@ type TwitchUser struct {
 type TwitchAuthClient struct {
 }
 
-func (c *TwitchAuthClient) Init() {
+func (c *TwitchAuthClient) Init(client *twitch.Client, tm *TokenMachine) {
 	twitchAuthCh = make(chan bool)
 	http.HandleFunc("/twitch_authcb", twitchAuthCb)
 	http.HandleFunc("/twitch_link", getAuthLink)
 	http.HandleFunc("/eventsub_cb", eventSubCallback)
+	chatClient = client
+	tokenMachine = tm
+
 	go http.ListenAndServe(":8078", nil)
 	twitchAuth = <-twitchAuthCh
 	fmt.Println("Auth'd for twitch api")
 	twitchAppAccessToken = c.GetAppAccessToken()
 	c.Subscribe("channel.follow")
+	//c.DeleteSubscription("35d7a468-fe29-4c62-8fa1-cd692f056281")
 }
 
 func twitchAuthCb(w http.ResponseWriter, r *http.Request) {
@@ -156,7 +164,7 @@ func (c *TwitchAuthClient) Subscribe(event string) {
 	u := "https://api.twitch.tv/helix/eventsub/subscriptions"
 	cond := struct {
 		BroadCasterUserID string `json:"broadcaster_user_id"`
-	}{"12826"}
+	}{"38570305"}
 
 	transport := struct {
 		Method   string `json:"method"`
@@ -227,6 +235,14 @@ func eventSubCallback(w http.ResponseWriter, r *http.Request) {
 			}
 			CreatedAt time.Time `json:"created_at"`
 		}
+		Event struct {
+			UserID               string `json:"user_id"`
+			UserLogin            string `json:"user_login"`
+			UserName             string `json:"user_name"`
+			BroadcasterUserID    string `json:"broadcaster_user_id"`
+			BroadcasterUserLogin string `json:"broadcaster_user_login"`
+			BroadcasterUserName  string `json:"broadcaster_user_name"`
+		}
 	}{}
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -245,7 +261,20 @@ func eventSubCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	fmt.Fprintln(w, respStruct.Challenge)
+	switch r.Header.Get("Twitch-Eventsub-Message-Type") {
+	case "webhook_callback_verification":
+		fmt.Fprintln(w, respStruct.Challenge)
+	case "notification":
+		if r.Header.Get("Twitch-Eventsub-Subscription-Type") == "channel.follow" && respStruct.Event.BroadcasterUserID == "38570305" {
+			fmt.Println(respStruct.Event.UserName)
+			const n = 100
+			s := fmt.Sprintf("Thanks for following @%s! Have %d tokens to spend on useless things...", respStruct.Event.UserName, n)
+			chatClient.Say("burtstanton", s)
+			tokenMachine.GrantToken(respStruct.Event.UserName, n)
+		}
+		w.WriteHeader(200)
+	}
+
 }
 
 func validSignature(headers http.Header, bodyBytes []byte) bool {
@@ -286,4 +315,22 @@ func (c *TwitchAuthClient) GetAppAccessToken() string {
 		return ""
 	}
 	return respStruct.AccessToken
+}
+
+func (c *TwitchAuthClient) DeleteSubscription(id string) {
+	u := fmt.Sprintf("https://api.twich.tv/helix/eventsub/subscriptions?id=%s", id)
+	req, err := http.NewRequest("DELETE", u, strings.NewReader(""))
+	if err != nil {
+		log.Println("Couldn't make request to cancel sub", err)
+		return
+	}
+	req.Header.Set("Client-ID", os.Getenv("BB_APP_CLIENT_ID"))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", twitchAppAccessToken))
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Println("could not make request to cancel sub", err)
+		return
+	}
+	fmt.Println("Cancel sub req status: ", resp.StatusCode)
 }

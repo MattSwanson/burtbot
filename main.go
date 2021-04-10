@@ -58,12 +58,21 @@ func main() {
 		fmt.Println("burtbot circuits activated")
 	})
 
+	handler = commands.NewCmdHandler(client)
+
+	burtCoin := commands.BurtCoin{}
+	burtCoin.Init()
+	handler.RegisterCommand("burtcoin", &burtCoin)
+
+	tokenMachine := commands.TokenMachine{BurtCoin: &burtCoin}
+	tokenMachine.Init()
+	handler.RegisterCommand("tokenmachine", &tokenMachine)
+
 	twitchAuthClient := commands.TwitchAuthClient{}
-	go twitchAuthClient.Init()
+	go twitchAuthClient.Init(client, &tokenMachine)
 
 	client.Join("burtstanton")
 
-	handler = commands.NewCmdHandler(client)
 	handler.RegisterCommand("nonillion", commands.Nonillion{})
 	handler.RegisterCommand("ded", &commands.Ded{})
 	handler.RegisterCommand("oven", &commands.Oven{Temperature: 65, BakeTemp: 0})
@@ -77,14 +86,6 @@ func main() {
 	sb := commands.SuggestionBox{}
 	sb.Init()
 	handler.RegisterCommand("sb", &sb)
-
-	burtCoin := commands.BurtCoin{}
-	burtCoin.Init()
-	handler.RegisterCommand("burtcoin", &burtCoin)
-
-	tokenMachine := commands.TokenMachine{BurtCoin: &burtCoin}
-	tokenMachine.Init()
-	handler.RegisterCommand("tokenmachine", &tokenMachine)
 
 	musicManager := commands.Music{TokenMachine: &tokenMachine}
 	go musicManager.Init()

@@ -198,11 +198,11 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 }
 
 func (t *TokenMachine) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-	return
+
 }
 
 func (t *TokenMachine) GrantToken(username string, number int) {
-	t.Tokens[username] += number
+	t.Tokens[strings.ToLower(username)] += number
 	if t.persist {
 		t.saveTokensToFile()
 	}
