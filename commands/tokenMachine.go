@@ -144,7 +144,7 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		}
 		if float64(amount)/float64(tokenRate) > bcBalance {
 			client.Say(msg.Channel, fmt.Sprintf("@%s, you don't have enough burtcoins to buy %d tokens.", msg.User.Name, amount))
-			client.Say(msg.Channel, fmt.Sprintf("@%s, you have %d. Need %d.", msg.User.Name, bcBalance, amount/tokenRate))
+			client.Say(msg.Channel, fmt.Sprintf("@%s, you have %.2f. Need %d.", msg.User.Name, bcBalance, amount/tokenRate))
 			return
 		}
 
@@ -182,6 +182,19 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		}
 		t.setTokenCount(args[2], n)
 	}
+
+	if args[1] == "grant" {
+		if !isMod(msg.User) || len(args) < 4 {
+			return
+		}
+		n, err := strconv.Atoi(args[3])
+		if err != nil {
+			log.Println("error converting to int - ", err.Error())
+			return
+		}
+		t.GrantToken(strings.ToLower(args[2]), n)
+		client.Say(msg.Channel, fmt.Sprintf("@%s, you were given %d tokens! Use them to play games.", args[2], n))
+	}
 }
 
 func (t *TokenMachine) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
@@ -189,10 +202,7 @@ func (t *TokenMachine) OnUserPart(client *twitch.Client, msg twitch.UserPartMess
 }
 
 func (t *TokenMachine) GrantToken(username string, number int) {
-	if _, ok := t.Tokens[username]; ok {
-		t.Tokens[username] += number
-	}
-	t.Tokens[username] = number
+	t.Tokens[username] += number
 	if t.persist {
 		t.saveTokensToFile()
 	}
