@@ -9,10 +9,10 @@ import (
 )
 
 type Tanks struct {
-	TcpChannel     chan string
-	TwitchClient   *TwitchAuthClient
-	running        bool
-	currentPlayers []twitch.User
+	TcpChannel   chan string
+	TwitchClient *TwitchAuthClient
+	running      bool
+	//currentPlayers []twitch.User
 }
 
 func (t *Tanks) Init() {

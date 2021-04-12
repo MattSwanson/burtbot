@@ -100,10 +100,6 @@ func (b *Bopometer) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		}
 		return
 	}
-
-	if args[1] == "top" {
-		// get top 3 bops
-	}
 }
 
 func (b *Bopometer) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
@@ -129,16 +125,13 @@ func bopTimer(c chan int) {
 	ticker := time.NewTicker(time.Second)
 	i := 1
 	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			i++
-			if i == boppingWindow-bopEndWaringTime {
-				c <- bopEndWaringTime
-			}
-			if i >= boppingWindow {
-				return
-			}
+	for range ticker.C {
+		i++
+		if i == boppingWindow-bopEndWaringTime {
+			c <- bopEndWaringTime
+		}
+		if i >= boppingWindow {
+			return
 		}
 	}
 }

@@ -88,5 +88,5 @@ func (l *Lights) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 }
 
 func (l *Lights) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-	return
+
 }

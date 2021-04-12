@@ -54,20 +54,17 @@ func (o *Oven) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 }
 
 func (o *Oven) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-	return
+
 }
 
 func (o *Oven) Preheat(temp int) {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			o.Temperature = o.Temperature + 1
-			if o.Temperature >= temp {
-				o.Temperature = temp
-				return
-			}
+	for range ticker.C {
+		o.Temperature = o.Temperature + 1
+		if o.Temperature >= temp {
+			o.Temperature = temp
+			return
 		}
 	}
 }

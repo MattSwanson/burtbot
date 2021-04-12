@@ -90,7 +90,6 @@ func (bc *BurtCoin) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage
 	if bc.StopMining(msg.User) {
 		client.Say(msg.Channel, fmt.Sprintf("%s left - turning off their miner to save my energies... or something.", msg.User))
 	}
-	return
 }
 
 // Give

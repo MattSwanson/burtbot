@@ -16,5 +16,5 @@ func (n Nonillion) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 }
 
 func (n Nonillion) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-	return
+
 }

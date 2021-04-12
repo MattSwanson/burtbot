@@ -188,7 +188,7 @@ func (m *Music) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 }
 
 func (m *Music) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-	return
+
 }
 
 func (m *Music) getCurrentTrackTitle() (string, bool) {
@@ -268,11 +268,10 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 
 func getSpotifyLink(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
-		http.NotFoundHandler()
+		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 	url := spotifyAuth.AuthURL(spotifyState)
 	//fmt.Println("Auth url for spotify: ", url)
 	fmt.Fprintf(w, `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>SpotAuth</title></head><body>Auth URL: <a href="%s">here</a></body></html>`, url)
-	return
 }

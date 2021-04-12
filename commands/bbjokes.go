@@ -63,16 +63,12 @@ func (j *Joke) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 }
 
 func (j *Joke) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-	return
+
 }
 
 func unlockJoke() {
 	time.Sleep(time.Second * time.Duration(jokeCD))
 	jokeLock = false
-}
-
-func manualUnlock() {
-
 }
 
 func (j *Joke) TellJoke(client *twitch.Client, msg twitch.PrivateMessage) {

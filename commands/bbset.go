@@ -90,7 +90,7 @@ func (b *Bbset) HandleMsg(client *twitch.Client, msg twitch.PrivateMessage) {
 }
 
 func (b *Bbset) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-	return
+
 }
 
 func (b Bbset) saveCommandsToFile() {
