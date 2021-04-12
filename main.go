@@ -77,6 +77,7 @@ func main() {
 	handler.RegisterCommand("ded", &commands.Ded{})
 	handler.RegisterCommand("oven", &commands.Oven{Temperature: 65, BakeTemp: 0})
 	handler.RegisterCommand("bbmsg", &commands.Msg{TcpChannel: commChannel})
+	handler.RegisterCommand("offbyone", &commands.OffByOneCounter{})
 
 	jokes := commands.Joke{TcpChannel: commChannel}
 	jokes.Init()
