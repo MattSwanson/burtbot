@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -35,9 +36,35 @@ type twitchAuthResp struct {
 }
 
 type TwitchUser struct {
+	UserID        string `json:"id"`
 	DisplayName   string `json:"display_name"`
 	ProfileImgURL string `json:"profile_image_url"`
 	ChannelDesc   string `json:"description"`
+}
+
+type ChannelInfo struct {
+	BroadcasterID       string `json:"broadcaster_id"`
+	BroadcasterName     string `json:"broadcaster_name"`
+	GameName            string `json:"game_name"`
+	GameID              string `json:"game_id"`
+	BroadcasterLanguage string `json:"broadcaster_language"`
+	Title               string
+}
+
+type EventSubscription struct {
+	ID        string
+	Status    string
+	Type      string
+	Version   string
+	Cost      int
+	Condition struct {
+		BroadCasterUserID string `json:"broadcaster_user_id"`
+	}
+	CreatedAt time.Time `json:"created_at"`
+	Transport struct {
+		Method   string
+		Callback string
+	}
 }
 
 type TwitchAuthClient struct {
@@ -56,7 +83,7 @@ func (c *TwitchAuthClient) Init(client *twitch.Client, tm *TokenMachine) {
 	fmt.Println("Auth'd for twitch api")
 	twitchAppAccessToken = c.GetAppAccessToken()
 	c.Subscribe("channel.follow")
-	//c.DeleteSubscription("35d7a468-fe29-4c62-8fa1-cd692f056281")
+	//c.GetSubscriptions()
 }
 
 func twitchAuthCb(w http.ResponseWriter, r *http.Request) {
@@ -157,7 +184,45 @@ func (c *TwitchAuthClient) GetUser(username string) TwitchUser {
 		log.Println("Couldn't decode json from response", err)
 		return TwitchUser{}
 	}
+	if len(rdata.Data) == 0 {
+		return TwitchUser{}
+	}
 	return rdata.Data[0]
+}
+
+func (c *TwitchAuthClient) GetChannelInfo(broadcaster_id string) ChannelInfo {
+	u := fmt.Sprintf("https://api.twitch.tv/helix/channels?broadcaster_id=%s", broadcaster_id)
+	req, err := http.NewRequest("GET", u, nil)
+	if err != nil {
+		log.Println("couldn't create request to get channel info: ", err)
+		return ChannelInfo{}
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", twitchAppAccessToken))
+	req.Header.Set("Client-Id", os.Getenv("BB_APP_CLIENT_ID"))
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Println("couldn't make request to get channel info: ", err)
+		return ChannelInfo{}
+	}
+
+	if resp.StatusCode != 200 {
+		return ChannelInfo{}
+	}
+
+	respStruct := struct {
+		Data []ChannelInfo
+	}{}
+	dec := json.NewDecoder(resp.Body)
+	err = dec.Decode(&respStruct)
+	if err != nil {
+		log.Println("couldn't decode json from channel info: ", err)
+		return ChannelInfo{}
+	}
+	if len(respStruct.Data) == 0 {
+		return ChannelInfo{}
+	}
+	return respStruct.Data[0]
 }
 
 func (c *TwitchAuthClient) Subscribe(event string) {
@@ -212,6 +277,8 @@ func (c *TwitchAuthClient) Subscribe(event string) {
 		return
 	}
 	if resp.StatusCode != 200 {
+		bs, _ := io.ReadAll(resp.Body)
+		log.Println(string(bs))
 		log.Println("Sub request: ", resp.StatusCode, resp.Status)
 		return
 	}
@@ -318,7 +385,7 @@ func (c *TwitchAuthClient) GetAppAccessToken() string {
 }
 
 func (c *TwitchAuthClient) DeleteSubscription(id string) {
-	u := fmt.Sprintf("https://api.twich.tv/helix/eventsub/subscriptions?id=%s", id)
+	u := fmt.Sprintf("https://api.twitch.tv/helix/eventsub/subscriptions?id=%s", id)
 	req, err := http.NewRequest("DELETE", u, strings.NewReader(""))
 	if err != nil {
 		log.Println("Couldn't make request to cancel sub", err)
@@ -333,4 +400,48 @@ func (c *TwitchAuthClient) DeleteSubscription(id string) {
 		return
 	}
 	fmt.Println("Cancel sub req status: ", resp.StatusCode)
+}
+
+func (client *TwitchAuthClient) GetSubscriptions() []EventSubscription {
+	subData := struct {
+		Data         []EventSubscription
+		Total        int
+		TotalCost    int `json:"total_cost"`
+		MaxTotalCost int `json:"max_total_cost"`
+		Limit        int
+		Pagination   struct{}
+	}{}
+	u := "https://api.twitch.tv/helix/eventsub/subscriptions"
+	req, err := http.NewRequest("GET", u, nil)
+	if err != nil {
+		log.Println("couldn't create request to get subs: ", err)
+		return []EventSubscription{}
+	}
+	req.Header.Set("Client-ID", os.Getenv("BB_APP_CLIENT_ID"))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", twitchAppAccessToken))
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Println("couldn't make request to get subs: ", err)
+		return []EventSubscription{}
+	}
+
+	if resp.StatusCode != 200 {
+		log.Println(resp.Status, resp.StatusCode)
+		return []EventSubscription{}
+	}
+	dec := json.NewDecoder(resp.Body)
+	err = dec.Decode(&subData)
+	if err != nil {
+		log.Println("couldn't decode json getting subs: ", err)
+		return []EventSubscription{}
+	}
+	for _, s := range subData.Data {
+		fmt.Println(s)
+	}
+	return subData.Data
+}
+
+func (client *TwitchAuthClient) GetAuthStatus() bool {
+	return twitchAuth
 }
