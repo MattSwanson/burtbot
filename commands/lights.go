@@ -90,3 +90,10 @@ func (l *Lights) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 func (l *Lights) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 
 }
+
+func (l *Lights) Help() []string {
+	return []string{
+		"!lights [color] to set the color of the lights you can't see.",
+		"red, green, blue or an integer value from 0 to 65535",
+	}
+}

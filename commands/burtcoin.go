@@ -86,7 +86,7 @@ func (bc *BurtCoin) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 }
 
 func (bc *BurtCoin) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-	log.Println(fmt.Sprintf(`%s has left the channel, close down their miner if app.`, msg.User))
+	// log.Println(fmt.Sprintf(`%s has left the channel, close down their miner if app.`, msg.User))
 	if bc.StopMining(msg.User) {
 		client.Say(msg.Channel, fmt.Sprintf("%s left - turning off their miner to save my energies... or something.", msg.User))
 	}
@@ -169,5 +169,15 @@ func (bc *BurtCoin) saveWalletsToFile() {
 	}
 	if err := os.WriteFile("./wallets.json", json, 0644); err != nil {
 		log.Println(err.Error())
+	}
+}
+
+func (bc *BurtCoin) Help() []string {
+	return []string{
+		"This is all very pointless...",
+		"!burtcoin mine start|stop to start or stop a miner",
+		"!burtcoin balance to check your current balance",
+		"!burtcoin give [username] [amount] to give someone some useless burtcoin",
+		"Waste everyones time.",
 	}
 }

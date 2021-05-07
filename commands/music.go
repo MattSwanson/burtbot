@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/gempir/go-twitch-irc/v2"
@@ -101,21 +100,21 @@ func (m *Music) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		return
 	}
 
-	if args[1] == "grant" {
-		if !isMod(msg.User) || len(args) < 4 {
-			return
-		}
-		var numberTokens int
-		if n, err := strconv.Atoi(args[3]); err != nil {
-			numberTokens = 1
-		} else {
-			numberTokens = n
-		}
-		// no validation for twitch users here - but we will save and fetch them in all lowercase
-		username := strings.ToLower(args[2])
-		m.TokenMachine.GrantToken(username, numberTokens)
-		return
-	}
+	// if args[1] == "grant" {
+	// 	if !isMod(msg.User) || len(args) < 4 {
+	// 		return
+	// 	}
+	// 	var numberTokens int
+	// 	if n, err := strconv.Atoi(args[3]); err != nil {
+	// 		numberTokens = 1
+	// 	} else {
+	// 		numberTokens = n
+	// 	}
+	// 	// no validation for twitch users here - but we will save and fetch them in all lowercase
+	// 	username := strings.ToLower(args[2])
+	// 	m.TokenMachine.GrantToken(username, numberTokens)
+	// 	return
+	// }
 
 	if args[1] == "request" {
 		if len(args) < 3 {
@@ -274,4 +273,15 @@ func getSpotifyLink(w http.ResponseWriter, r *http.Request) {
 	url := spotifyAuth.AuthURL(spotifyState)
 	//fmt.Println("Auth url for spotify: ", url)
 	fmt.Fprintf(w, `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>SpotAuth</title></head><body>Auth URL: <a href="%s">here</a></body></html>`, url)
+}
+
+func (m Music) Help() []string {
+	return []string{
+		"This all assumes music is playing and someone remember to log in...",
+		"!music current will show the currently playing song",
+		"!music last will show the last song played",
+		"!music request [spotify link] will add a song to the queue for 1 token",
+		fmt.Sprintf("!music skip to skip the current track for %d tokens", skipCost),
+		fmt.Sprintf("!music previous to replay the previous song for %d tokens", previousCost),
+	}
 }

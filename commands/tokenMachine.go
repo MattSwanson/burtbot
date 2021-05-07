@@ -232,3 +232,11 @@ func (t *TokenMachine) getTokenCount(user twitch.User) int {
 	// No one gets any tokens!!!!
 	return t.Tokens[username]
 }
+
+func (t *TokenMachine) Help() []string {
+	return []string{
+		"!tokenmachine buy to buy tokens with hard earned burtcoin",
+		fmt.Sprintf("Get %d tokens for one burtcoin", tokenRate),
+		"!tokenmachine balance to see how many tokens you have. For now.",
+	}
+}

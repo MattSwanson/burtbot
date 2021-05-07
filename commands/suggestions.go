@@ -54,12 +54,15 @@ func (sb *SuggestionBox) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		if len(args) < 3 {
 			return
 		}
-		if i, err := strconv.Atoi(args[2]); err == nil && len(sb.Suggestions) >= i {
-			suggestion := sb.Suggestions[i]
+		if i, err := strconv.Atoi(args[2]); err == nil && i <= len(sb.Suggestions) && i > 0 {
+			suggestion := sb.Suggestions[i-1]
 			str := fmt.Sprintf("Suggestion #%d from %s:", i, suggestion.Username)
 			client.Say(msg.Channel, str)
 			client.Say(msg.Channel, suggestion.Text)
 		}
+	}
+	if args[1] == "count" {
+		client.Say(msg.Channel, fmt.Sprintf("There have been %d very good and reasonable suggestions.", len(sb.Suggestions)))
 	}
 }
 
@@ -75,5 +78,13 @@ func (sb *SuggestionBox) saveToFile() {
 	}
 	if err := os.WriteFile("./suggestions.json", json, 0644); err != nil {
 		log.Println(err.Error())
+	}
+}
+
+func (sb *SuggestionBox) Help() []string {
+	return []string{
+		"!sb submit [suggestion] to suggest a suggestion",
+		"!sb get [number] get a suggestion which has been suggested",
+		"!sb count get the number of suggestions which have been suggested thus far",
 	}
 }

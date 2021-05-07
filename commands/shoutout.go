@@ -63,3 +63,10 @@ func (s *Shoutout) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 func (s *Shoutout) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 
 }
+
+func (s *Shoutout) Help() []string {
+	return []string{
+		"!so [user] to shout out another streamer",
+		"Sometimes you have to ask nicely",
+	}
+}

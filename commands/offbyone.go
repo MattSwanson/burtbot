@@ -33,3 +33,10 @@ func (o *OffByOneCounter) Run(client *twitch.Client, msg twitch.PrivateMessage) 
 func (o *OffByOneCounter) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 
 }
+
+func (o *OffByOneCounter) Help() []string {
+	return []string{
+		"!offbyone when they're off by one again",
+		"!offbyone to see how many times we have been off by one",
+	}
+}

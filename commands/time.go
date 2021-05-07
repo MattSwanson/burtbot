@@ -21,3 +21,9 @@ func (t Tim) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 func (t *Tim) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 
 }
+
+func (t *Tim) Help() []string {
+	return []string{
+		"What time is it Mr. Clock?",
+	}
+}

@@ -32,23 +32,23 @@ func (g *Gopher) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		g.TcpChannel <- "spawngo " + n
 		return
 	}
-	if args[1] == "hide" {
-		fmt.Println("hide goph")
-		g.TcpChannel <- "hidego"
-		return
-	}
-	if args[1] == "show" {
-		fmt.Println("show goph")
-		g.TcpChannel <- "showgo"
-		return
-	}
-	if args[1] == "size" {
-		if len(args) < 3 {
-			return
-		}
-		g.TcpChannel <- "sizego " + args[2]
-		return
-	}
+	// if args[1] == "hide" {
+	// 	fmt.Println("hide goph")
+	// 	g.TcpChannel <- "hidego"
+	// 	return
+	// }
+	// if args[1] == "show" {
+	// 	fmt.Println("show goph")
+	// 	g.TcpChannel <- "showgo"
+	// 	return
+	// }
+	// if args[1] == "size" {
+	// 	if len(args) < 3 {
+	// 		return
+	// 	}
+	// 	g.TcpChannel <- "sizego " + args[2]
+	// 	return
+	// }
 	if args[1] == "kill" {
 		g.TcpChannel <- "killgophs"
 		return
@@ -58,4 +58,11 @@ func (g *Gopher) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 
 func (g *Gopher) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 
+}
+
+func (g *Gopher) Help() []string {
+	return []string{
+		"!go spawn [number] will spawn some [number] of gophers",
+		"!go kill will move all the gophers to another plane of existence.",
+	}
 }

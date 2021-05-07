@@ -23,24 +23,6 @@ func (p *Plinko) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		return
 	}
 
-	if args[1] == "start" && !p.running {
-		p.running = true
-		p.TcpChannel <- "plinko start"
-		return
-	}
-
-	if args[1] == "stop" && p.running {
-		if isMod(msg.User) {
-			p.TcpChannel <- "plinko stop"
-			p.running = false
-			return
-		}
-	}
-
-	// if p.currentPlayer == nil || p.currentPlayer.DisplayName != msg.User.DisplayName {
-	// 	return
-	// }
-	// !plinko drop n username - username supplier by message not command, so len(args) = 3
 	if args[1] == "drop" && len(args) >= 3 {
 		numTokens := p.TokenMachine.getTokenCount(msg.User)
 		if numTokens <= 0 {
@@ -48,21 +30,13 @@ func (p *Plinko) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			return
 		}
 		cost := 1
-		if args[2] == "all" && numTokens >= 5 {
-			cost = 5
+		if args[2] == "all" && numTokens >= 9 {
+			cost = 9
 		}
 		p.TokenMachine.setTokenCount(msg.User.Name, numTokens-cost)
-		p.TcpChannel <- fmt.Sprintf("plinko drop %s %s", args[2], msg.User.DisplayName)
+		p.TcpChannel <- fmt.Sprintf("plinko drop %s %s %s", args[2], msg.User.DisplayName, msg.User.Color)
 	}
 
-	// switch args[1] {
-	// // case "left":
-	// // 	p.TcpChannel <- "plinko left"
-	// // case "right":
-	// // 	p.TcpChannel <- "plinko right"
-	// case "drop":
-	// 	p.TcpChannel <- "plinko drop"
-	// }
 }
 
 func (p *Plinko) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
@@ -72,4 +46,12 @@ func (p *Plinko) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 func (p *Plinko) Stop() {
 	p.TcpChannel <- "plinko stop"
 	p.running = false
+}
+
+func (p *Plinko) Help() []string {
+	return []string{
+		"!plinko drop [number] to drop a token at the specified drop point",
+		"!plinko drop all will drop a token at each drop point",
+		"Each token costs one token.",
+	}
 }

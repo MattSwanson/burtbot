@@ -74,7 +74,7 @@ func (b *Bopometer) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			// start bopping
 			b.isBopping = true
 			b.hasBopped[msg.User.Name] = true
-			client.Say(msg.Channel, fmt.Sprintf("BOP BOP BOP @%s has started the bopometer! Type !bop to bop", msg.User.DisplayName))
+			client.Say(msg.Channel, fmt.Sprintf("BOP BOP BOP @%s has started the bopometer! Spam BOP to bop", msg.User.DisplayName))
 			artists, _ := b.Music.getCurrentTrackArtists()
 			song, _ := b.Music.getCurrentTrackTitle()
 			b.currentTrack = trackInfo{Name: song, Artists: artists, Rating: 1, ID: trackID}
@@ -162,4 +162,12 @@ func (b *Bopometer) Results(client *twitch.Client, rating string) {
 	}
 	b.hasBopped = map[string]bool{}
 	b.saveRatingsToFile()
+}
+
+func (b *Bopometer) Help() []string {
+	return []string{
+		"!bop will intiaite the bopometer",
+		"spam BOP emotes to raise the bopometer",
+		"Destroy stream quality in the process.",
+	}
 }

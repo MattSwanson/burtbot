@@ -58,7 +58,7 @@ func main() {
 		fmt.Println("burtbot circuits activated")
 	})
 
-	handler = commands.NewCmdHandler(client)
+	handler = commands.NewCmdHandler(client, commChannel)
 
 	burtCoin := commands.BurtCoin{}
 	burtCoin.Init()
@@ -73,7 +73,7 @@ func main() {
 
 	client.Join("burtstanton")
 
-	handler.RegisterCommand("nonillion", commands.Nonillion{})
+	//handler.RegisterCommand("nonillion", commands.Nonillion{})
 	handler.RegisterCommand("ded", &commands.Ded{})
 	handler.RegisterCommand("oven", &commands.Oven{Temperature: 65, BakeTemp: 0})
 	handler.RegisterCommand("bbmsg", &commands.Msg{TcpChannel: commChannel})
@@ -92,7 +92,7 @@ func main() {
 	go musicManager.Init()
 	handler.RegisterCommand("music", &musicManager)
 
-	bbset := commands.Bbset{ReservedCommands: &handler.Commands}
+	bbset = commands.Bbset{ReservedCommands: &handler.Commands}
 	bbset.Init()
 	handler.RegisterCommand("bbset", &bbset)
 
@@ -121,6 +121,11 @@ func main() {
 	tanks := commands.Tanks{TcpChannel: commChannel}
 	handler.RegisterCommand("tanks", &tanks)
 
+	lightsOut := commands.LightsOut{CommChannel: commChannel}
+	handler.RegisterCommand("lo", &lightsOut)
+
+	handler.RegisterCommand("protocolr", &commands.ProtoR{})
+
 	go handleResults(&plinko, &tokenMachine, &snake, &tanks, &bop)
 
 	err := client.Connect()
@@ -130,7 +135,13 @@ func main() {
 }
 
 func handleMessage(msg twitch.PrivateMessage) {
+	if msg.User.DisplayName == "tundragaminglive" {
+		commChannel <- "miracle"
+	}
 	lower := strings.ToLower(msg.Message)
+	if lower == "!help" {
+		handler.HelpAll()
+	}
 	if bopometer.GetBopping() {
 		bops := strings.Count(msg.Message, "BOP")
 		bopometer.AddBops(bops)
@@ -177,13 +188,13 @@ func handleMessage(msg twitch.PrivateMessage) {
 
 //TODO: Figure out if this can work consistantly enough for what we want it for
 func handleUserPart(msg twitch.UserPartMessage) {
-	log.Printf(`%s has "parted" the channel.`, msg.User)
+	//log.Printf(`%s has "parted" the channel.`, msg.User)
 	// handle any commands that have interaction with users leaving here
 	go handler.HandlePartMsg(msg)
 }
 
 func handleUserJoin(msg twitch.UserJoinMessage) {
-	log.Printf(`%s has joined the channel.`, msg.User)
+	//log.Printf(`%s has joined the channel.`, msg.User)
 }
 
 func connectToOverlay() {
@@ -241,12 +252,18 @@ func handleResults(
 			// plinko result username n
 			if n, err := strconv.Atoi(args[3]); err == nil {
 				t.GrantToken(strings.ToLower(args[2]), n)
-				plural := ""
-				if n > 1 {
-					plural = "s"
+
+				s := ""
+				if n > 0 {
+					plural := ""
+					if n > 1 {
+						plural = "s"
+					}
+					s = fmt.Sprintf("@%s won %d token%s!", args[2], n, plural)
+				} else {
+					s = fmt.Sprintf("@%s, YOU GET NOTHING! GOOD DAY!", args[2])
 				}
-				s := fmt.Sprintf("@%s won %d token%s!", args[2], n, plural)
-				client.Say("burtstanton", s)
+				//client.Say("burtstanton", s)
 				mMsg := commands.MarqueeMsg{
 					RawMessage: s,
 					Emotes:     "",

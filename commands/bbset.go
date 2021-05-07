@@ -74,6 +74,7 @@ func (b *Bbset) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		return
 	}
 	b.commands[args[1]] = strings.Join(args[2:], " ")
+	client.Say(msg.Channel, fmt.Sprintf("!%s set for: %s", args[1], b.commands[args[1]]))
 	if b.persist {
 		b.saveCommandsToFile()
 	}
@@ -93,7 +94,7 @@ func (b *Bbset) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 
 }
 
-func (b Bbset) saveCommandsToFile() {
+func (b *Bbset) saveCommandsToFile() {
 	json, err := json.Marshal(b.commands)
 	if err != nil {
 		log.Println("Couldn't json")
@@ -101,5 +102,14 @@ func (b Bbset) saveCommandsToFile() {
 	}
 	if err := os.WriteFile("./commands.json", json, 0644); err != nil {
 		log.Println(err.Error())
+	}
+}
+
+func (b *Bbset) Help() []string {
+	return []string{
+		"Create a text based command",
+		"To add - !bbset [name] [text to display]",
+		"To remove - !bbset [name] remove",
+		"Then use ![name] to run the command",
 	}
 }

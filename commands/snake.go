@@ -47,3 +47,11 @@ func (s *Snake) SetRunning(b bool) {
 func (s *Snake) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 
 }
+
+func (s *Snake) Help() []string {
+	return []string{
+		"!snake start|stop starts or stops snake...",
+		"Type a, s, d or f to move plinko around the screen",
+		"Eat square apples and squeek",
+	}
+}

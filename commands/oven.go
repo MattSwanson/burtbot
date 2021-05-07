@@ -68,3 +68,11 @@ func (o *Oven) Preheat(temp int) {
 		}
 	}
 }
+
+func (o *Oven) Help() []string {
+	return []string{
+		"!oven preheat [temp] to preheat the oven to the specified temperature",
+		"!oven temp to check the current temperature of the oven",
+		"Wonder why... Why anything?",
+	}
+}

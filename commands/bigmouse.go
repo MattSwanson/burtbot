@@ -32,3 +32,9 @@ func (m *BigMouse) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 func (m *BigMouse) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 
 }
+
+func (m *BigMouse) Help() []string {
+	return []string{
+		"!bigmouse on|off to enable/disable big mouse mode [NOT WORKING RIGHT NOW... lazy]",
+	}
+}

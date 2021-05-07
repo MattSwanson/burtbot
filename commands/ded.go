@@ -93,3 +93,9 @@ func unlock() {
 	time.Sleep(time.Second * time.Duration(cooldown))
 	locked = false
 }
+
+func (d *Ded) Help() []string {
+	return []string{
+		"!ded to increment the ded counter because streamer is bad at game",
+	}
+}

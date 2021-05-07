@@ -66,3 +66,13 @@ func (t *Tanks) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 func (t *Tanks) Stop() {
 	t.running = false
 }
+
+func (t *Tanks) Help() []string {
+	return []string{
+		"!tanks start to load tanks",
+		"!tanks join to join the game",
+		"!tanks shoot [angle] [velocity] to shoot when it's your turn",
+		"The angle is in degrees 0-360",
+		"Velocity is a percentage 1 to 100",
+	}
+}

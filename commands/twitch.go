@@ -82,8 +82,21 @@ func (c *TwitchAuthClient) Init(client *twitch.Client, tm *TokenMachine) {
 	twitchAuth = <-twitchAuthCh
 	fmt.Println("Auth'd for twitch api")
 	twitchAppAccessToken = c.GetAppAccessToken()
-	c.Subscribe("channel.follow")
-	//c.GetSubscriptions()
+
+	// Get active eventsubs cancel them since they likely have an out of date callback url
+	eventSubs := c.GetSubscriptions()
+	var alreadySubbed bool
+	for _, es := range eventSubs {
+		if es.Transport.Callback == os.Getenv("TWITCH_CALLBACK_URL") {
+			alreadySubbed = true
+			continue
+		}
+		c.DeleteSubscription(es.ID)
+	}
+	if !alreadySubbed {
+		c.Subscribe("channel.follow")
+	}
+
 }
 
 func twitchAuthCb(w http.ResponseWriter, r *http.Request) {

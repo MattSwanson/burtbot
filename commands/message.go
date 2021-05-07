@@ -31,3 +31,9 @@ func (m *Msg) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 func (m *Msg) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 
 }
+
+func (m *Msg) Help() []string {
+	return []string{
+		"!bbmsg [text] to make me say the thing",
+	}
+}

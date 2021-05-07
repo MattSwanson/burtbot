@@ -60,3 +60,11 @@ func (n *Marquee) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 func (n *Marquee) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 
 }
+
+func (m *Marquee) Help() []string {
+	return []string{
+		"!marquee set [text] will create a scrolling marquee with the given text",
+		"!marquee once [text] will do the same but it will only go across once",
+		"!marquee off to turn them all off and ruin everyone's fun.",
+	}
+}
