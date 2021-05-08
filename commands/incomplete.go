@@ -1,0 +1,39 @@
+package commands
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/gempir/go-twitch-irc/v2"
+)
+
+type Incomplete struct {
+	count int
+}
+
+func (i *Incomplete) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
+	if len(args) <= 1 {
+		i.count++
+		client.Say(msg.Channel, "Oh, another uhh...")
+		return
+	}
+	if args[1] == "count" {
+		client.Say(msg.Channel, fmt.Sprintf("Been lost in thought %d times today.", i.count))
+	}
+}
+
+func (i *Incomplete) Init() {
+
+}
+
+func (i Incomplete) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
+
+}
+
+func (i Incomplete) Help() []string {
+	return []string{
+		"!incomplete to mark another point in time where we lose all track of what I can't remember",
+		"!incomplete count to see how many times that happened?",
+	}
+}
