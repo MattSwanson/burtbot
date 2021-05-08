@@ -30,11 +30,19 @@ func (n *Marquee) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	if len(args) < 2 {
 		return
 	}
-	// msg.Tags["emotes"]
-	fmt.Println(msg.Emotes)
-	fmt.Println(msg.Tags["emotes"])
+	if args[1] == "off" {
+		n.TcpChannel <- "marquee off"
+	}
+	var offset int
+	if args[1] == "set" {
+		offset = 13
+	} else if args[1] == "once" {
+		offset = 14
+	} else {
+		return
+	}
 	mMsg := MarqueeMsg{
-		RawMessage: strings.Join(args[2:], " "),
+		RawMessage: msg.Message[offset:],
 		Emotes:     msg.Tags["emotes"],
 	}
 	j, err := json.Marshal(mMsg)
@@ -42,19 +50,7 @@ func (n *Marquee) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		log.Println(err.Error())
 		return
 	}
-	if args[1] == "off" {
-		n.TcpChannel <- "marquee off"
-	} else if args[1] == "set" {
-		n.TcpChannel <- "marquee set " + string(j)
-	} else if args[1] == "once" {
-		n.TcpChannel <- "marquee once " + string(j)
-	}
-
-	/*else if args[1] == "embiggen" {
-		n.TcpChannel <- "setmarquee " + "embiggen"
-	} else if args[1] == "smol" {
-		n.TcpChannel <- "setmarquee " + "smol"
-	}*/
+	n.TcpChannel <- fmt.Sprintf("marquee %s %s", args[1], string(j))
 }
 
 func (n *Marquee) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {

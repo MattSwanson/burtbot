@@ -125,6 +125,7 @@ func main() {
 	handler.RegisterCommand("lo", &lightsOut)
 
 	handler.RegisterCommand("protocolr", &commands.ProtoR{})
+	handler.RegisterCommand("incomplete", &commands.Incomplete{})
 
 	go handleResults(&plinko, &tokenMachine, &snake, &tanks, &bop)
 
