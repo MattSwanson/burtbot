@@ -96,7 +96,7 @@ func (j *Joke) TellJoke(client *twitch.Client, msg twitch.PrivateMessage) {
 	}
 
 	stripped := strings.ReplaceAll(r.Joke, "\n", " ")
-	j.TcpChannel <- fmt.Sprintf("tts %s", stripped)
+	j.TcpChannel <- fmt.Sprintf("tts true %s", stripped)
 
 	// Some jokes have \r\n in them - I think we need to filter those out
 	jokes := strings.Split(r.Joke, "\n")

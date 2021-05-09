@@ -25,7 +25,7 @@ func (m *Msg) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		return
 	}
 	newMsg := strings.Join(args[1:], " ")
-	m.TcpChannel <- fmt.Sprintf("tts %s", newMsg)
+	m.TcpChannel <- fmt.Sprintf("tts false %s", newMsg)
 }
 
 func (m *Msg) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {

@@ -82,7 +82,7 @@ func isMod(user twitch.User) bool {
 func (handler *CmdHandler) HelpAll() {
 	for _, cmd := range handler.Commands {
 		for _, h := range cmd.Help() {
-			handler.TcpChannel <- fmt.Sprintf("tts %s", h)
+			handler.TcpChannel <- fmt.Sprintf("tts true %s", h)
 			handler.TcpChannel <- fmt.Sprintf("marquee once {\"rawMessage\":\"%s\"}", h)
 		}
 	}
