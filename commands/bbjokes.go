@@ -41,7 +41,7 @@ func (j *Joke) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	}
 	args := strings.Fields(strings.ToLower(strings.TrimPrefix(msg.Message, "!")))
 	if len(args) == 1 {
-		j.TellJoke(client, msg)
+		j.TellJoke(client, msg, false)
 		return
 	}
 
@@ -59,6 +59,13 @@ func (j *Joke) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			client.Say(msg.Channel, "Ending joke mode - try to stop laughing now.")
 			j.jokeModeStop <- true
 		}
+		return
+	}
+
+	if args[1] == "overload" {
+		for i := 0; i < 100; i++ {
+			j.TellJoke(client, msg, true)
+		}
 	}
 }
 
@@ -71,7 +78,7 @@ func unlockJoke() {
 	jokeLock = false
 }
 
-func (j *Joke) TellJoke(client *twitch.Client, msg twitch.PrivateMessage) {
+func (j *Joke) TellJoke(client *twitch.Client, msg twitch.PrivateMessage, voiceOnly bool) {
 	// Fetch a joke from icanhazdadjoke api
 	req, err := http.NewRequest("GET", "https://icanhazdadjoke.com", nil)
 	if err != nil {
@@ -99,6 +106,9 @@ func (j *Joke) TellJoke(client *twitch.Client, msg twitch.PrivateMessage) {
 	j.TcpChannel <- fmt.Sprintf("tts true %s", stripped)
 
 	// Some jokes have \r\n in them - I think we need to filter those out
+	if voiceOnly {
+		return
+	}
 	jokes := strings.Split(r.Joke, "\n")
 	for _, joke := range jokes {
 		client.Say(msg.Channel, joke)
@@ -115,7 +125,7 @@ func (j *Joke) JokeMode(client *twitch.Client, msg twitch.PrivateMessage) {
 				j.jokeMode = false
 				return
 			default:
-				j.TellJoke(client, msg)
+				j.TellJoke(client, msg, true)
 				time.Sleep(time.Second * 10)
 			}
 		}
@@ -126,5 +136,6 @@ func (j *Joke) Help() []string {
 	return []string{
 		"!joke to hear one joke.",
 		"!joke mode on|off to enable or disable joke mode",
+		"!joke overload - don't do this. please.",
 	}
 }
