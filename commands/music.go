@@ -18,7 +18,7 @@ type Music struct {
 const skipCost = 5       //tokens
 const previousCost = 100 //tokens
 
-var spotifyAuth = spotify.NewAuthenticator("http://localhost:8079/spotify_authcb",
+var spotifyAuth = spotify.NewAuthenticator("https://burtbot.app:8079/spotify_authcb",
 	spotify.ScopeUserReadPrivate,
 	spotify.ScopeUserReadCurrentlyPlaying,
 	spotify.ScopeUserReadRecentlyPlayed,
@@ -30,7 +30,7 @@ func (m *Music) Init() {
 
 	http.HandleFunc("/spotify_authcb", completeAuth)
 	http.HandleFunc("/spotify_link", getSpotifyLink)
-	go http.ListenAndServe(":8079", nil)
+	go http.ListenAndServeTLS(":8079", "/etc/letsencrypt/live/burtbot.app/fullchain.pem", "/etc/letsencrypt/live/burtbot.app/privkey.pem", nil)
 
 	m.SpotifyClient = <-spotifyAuthCh
 

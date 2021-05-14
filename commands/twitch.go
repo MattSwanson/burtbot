@@ -78,7 +78,7 @@ func (c *TwitchAuthClient) Init(client *twitch.Client, tm *TokenMachine) {
 	chatClient = client
 	tokenMachine = tm
 
-	go http.ListenAndServe(":8078", nil)
+	go http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/burtbot.app/fullchain.pem", "/etc/letsencrypt/live/burtbot.app/privkey.pem", nil)
 	twitchAuth = <-twitchAuthCh
 	fmt.Println("Auth'd for twitch api")
 	twitchAppAccessToken = c.GetAppAccessToken()
@@ -100,10 +100,9 @@ func (c *TwitchAuthClient) Init(client *twitch.Client, tm *TokenMachine) {
 }
 
 func twitchAuthCb(w http.ResponseWriter, r *http.Request) {
-	//fmt.Println(r.FormValue("code"))
 	code := r.FormValue("code")
 	//scope := r.FormValue("scope")
-	reqUrl := fmt.Sprintf(`https://id.twitch.tv/oauth2/token?client_id=%s&client_secret=%s&code=%s&grant_type=authorization_code&redirect_uri=http://localhost:8078/twitch_authcb`,
+	reqUrl := fmt.Sprintf(`https://id.twitch.tv/oauth2/token?client_id=%s&client_secret=%s&code=%s&grant_type=authorization_code&redirect_uri=https://burtbot.app/twitch_authcb`,
 		os.Getenv("BB_APP_CLIENT_ID"),
 		os.Getenv("BB_APP_SECRET"),
 		code,
@@ -115,7 +114,9 @@ func twitchAuthCb(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		log.Fatal("couldn't communicate with twitch auth")
+		bytes, _ := ioutil.ReadAll(resp.Body)
+		log.Println(string(bytes))
+		log.Fatal("couldn't communicate with twitch auth :, ", resp.StatusCode)
 	}
 	dec := json.NewDecoder(resp.Body)
 	respObj := twitchAuthResp{}
@@ -136,7 +137,7 @@ func getAuthLink(w http.ResponseWriter, r *http.Request) {
 	buf.WriteByte('?')
 	v := url.Values{
 		"client_id":     {os.Getenv("BB_APP_CLIENT_ID")},
-		"redirect_uri":  {"http://localhost:8078/twitch_authcb"},
+		"redirect_uri":  {"https://burtbot.app/twitch_authcb"},
 		"response_type": {"code"},
 		"scope":         {"user:read:email"},
 	}
@@ -184,7 +185,7 @@ func (c *TwitchAuthClient) GetUser(username string) TwitchUser {
 		return TwitchUser{}
 	}
 	if resp.StatusCode != 200 {
-		log.Println("Bad reqyest get user", resp.Status)
+		log.Println("Bad request get user", resp.Status)
 		return TwitchUser{}
 	}
 

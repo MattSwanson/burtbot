@@ -199,7 +199,8 @@ func handleUserJoin(msg twitch.UserJoinMessage) {
 }
 
 func connectToOverlay() {
-	conn, err := net.Dial("tcp", "localhost:8081")
+	addr := fmt.Sprintf("%s:8081", os.Getenv("OVERLAY_IP"))
+	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		log.Println("Couldn't connect to overlay")
 		time.Sleep(time.Second * 10)
