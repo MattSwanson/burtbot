@@ -89,6 +89,7 @@ func (c *TwitchAuthClient) Init(client *twitch.Client, tm *TokenMachine) {
 	for _, es := range eventSubs {
 		if es.Transport.Callback == os.Getenv("TWITCH_CALLBACK_URL") {
 			alreadySubbed = true
+			fmt.Println("Eventsub already active. Move along.")
 			continue
 		}
 		c.DeleteSubscription(es.ID)
@@ -126,7 +127,6 @@ func twitchAuthCb(w http.ResponseWriter, r *http.Request) {
 	}
 	twitchAccessToken = respObj.Access_token
 	twitchRefreshToken = respObj.Refresh_token
-	fmt.Println("exp: ", respObj.Expires_in)
 	fmt.Fprintf(w, "Twitch API authd!")
 	twitchAuthCh <- true
 }
@@ -179,7 +179,6 @@ func (c *TwitchAuthClient) GetUser(username string) TwitchUser {
 	req.Header.Set("Authorization", "Bearer "+twitchAccessToken)
 	req.Header.Set("Client-Id", os.Getenv("BB_APP_CLIENT_ID"))
 	resp, err := http.DefaultClient.Do(req)
-	fmt.Println(resp.Request)
 	if err != nil {
 		log.Println("Error making request to twitch api", err)
 		return TwitchUser{}
@@ -347,7 +346,6 @@ func eventSubCallback(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, respStruct.Challenge)
 	case "notification":
 		if r.Header.Get("Twitch-Eventsub-Subscription-Type") == "channel.follow" && respStruct.Event.BroadcasterUserID == "38570305" {
-			fmt.Println(respStruct.Event.UserName)
 			const n = 100
 			s := fmt.Sprintf("Thanks for following @%s! Have %d tokens to spend on useless things...", respStruct.Event.UserName, n)
 			chatClient.Say("burtstanton", s)
@@ -449,9 +447,6 @@ func (client *TwitchAuthClient) GetSubscriptions() []EventSubscription {
 	if err != nil {
 		log.Println("couldn't decode json getting subs: ", err)
 		return []EventSubscription{}
-	}
-	for _, s := range subData.Data {
-		fmt.Println(s)
 	}
 	return subData.Data
 }

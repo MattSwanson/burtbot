@@ -32,15 +32,9 @@ func (m *Music) Init() {
 	http.HandleFunc("/spotify_link", getSpotifyLink)
 	go http.ListenAndServeTLS(":8079", "/etc/letsencrypt/live/burtbot.app/fullchain.pem", "/etc/letsencrypt/live/burtbot.app/privkey.pem", nil)
 
-	m.SpotifyClient = <-spotifyAuthCh
-
 	fmt.Println("Awating Spotify authentication...")
-	user, err := m.SpotifyClient.CurrentUser()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("Logged in to Spotify as: ", user.ID)
-
+	m.SpotifyClient = <-spotifyAuthCh
+	fmt.Println("Logged in to Spotify")
 }
 
 func (m *Music) Run(client *twitch.Client, msg twitch.PrivateMessage) {

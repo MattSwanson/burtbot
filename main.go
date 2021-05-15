@@ -216,7 +216,7 @@ func connectToOverlay() {
 	fmt.Println("Connected to overlay")
 	for {
 		s := <-commChannel
-		fmt.Println(s)
+		// fmt.Println(s)
 		_, err := fmt.Fprintf(conn, "%s\n", s)
 		if err != nil {
 			// we know we have no connection, stop pinging until we reconnect
