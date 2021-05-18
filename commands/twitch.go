@@ -72,14 +72,14 @@ type TwitchAuthClient struct {
 
 func (c *TwitchAuthClient) Init(client *twitch.Client, tm *TokenMachine) {
 	twitchAuthCh = make(chan bool)
-	http.HandleFunc("/twitch_authcb", twitchAuthCb)
+	/* http.HandleFunc("/twitch_authcb", twitchAuthCb)
 	http.HandleFunc("/twitch_link", getAuthLink)
 	http.HandleFunc("/eventsub_cb", eventSubCallback)
 	http.HandleFunc("/", home)
 	chatClient = client
 	tokenMachine = tm
-
-	go http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/burtbot.app/fullchain.pem", "/etc/letsencrypt/live/burtbot.app/privkey.pem", nil)
+	*/
+	// go http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/burtbot.app/fullchain.pem", "/etc/letsencrypt/live/burtbot.app/privkey.pem", nil)
 	twitchAuth = <-twitchAuthCh
 	fmt.Println("Auth'd for twitch api")
 	twitchAppAccessToken = c.GetAppAccessToken()
@@ -101,15 +101,8 @@ func (c *TwitchAuthClient) Init(client *twitch.Client, tm *TokenMachine) {
 
 }
 
-func home(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	fmt.Fprint(w, "boop.\n")
-}
 
-func twitchAuthCb(w http.ResponseWriter, r *http.Request) {
+func TwitchAuthCb(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -148,7 +141,7 @@ func twitchAuthCb(w http.ResponseWriter, r *http.Request) {
 	twitchAuthCh <- true
 }
 
-func getAuthLink(w http.ResponseWriter, r *http.Request) {
+func GetAuthLink(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -318,7 +311,7 @@ func (c *TwitchAuthClient) Subscribe(event string) {
 	}
 }
 
-func eventSubCallback(w http.ResponseWriter, r *http.Request) {
+func EventSubCallback(w http.ResponseWriter, r *http.Request) {
 	respStruct := struct {
 		Challenge    string
 		Subscription struct {

@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
+	"net/http"
 	"github.com/MattSwanson/burtbot/db"
 	"github.com/MattSwanson/burtbot/commands"
 	"github.com/gempir/go-twitch-irc/v2"
@@ -87,6 +87,15 @@ func main() {
 	go twitchAuthClient.Init(client, &tokenMachine)
 
 	client.Join("burtstanton")
+
+	// Add handlers for http stuffs
+	http.HandleFunc("/twitch_authcb", commands.TwitchAuthCb)
+	http.HandleFunc("/twitch_link", commands.GetAuthLink)
+	http.HandleFunc("/eventsub_cb", commands.EventSubCallback)
+	http.HandleFunc("/", home)
+
+	// Create a web server to listen on HTTPS
+	go http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/burtbot.app/fullchain.pem", "/etc/letsencrypt/live/burtbot.app/privkey.pem", nil)
 
 	//handler.RegisterCommand("nonillion", commands.Nonillion{})
 	handler.RegisterCommand("ded", &commands.Ded{})
@@ -325,6 +334,14 @@ func unlockSchlorp() {
 	time.Sleep(time.Second * time.Duration(schlorpCD))
 	schlorpLock = false
 	log.Println("schlorp unlocked")
+}
+
+func home(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	fmt.Fprint(w, "boop.\n")
 }
 
 /*func importSuggestions() {
