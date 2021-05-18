@@ -75,6 +75,7 @@ func (c *TwitchAuthClient) Init(client *twitch.Client, tm *TokenMachine) {
 	http.HandleFunc("/twitch_authcb", twitchAuthCb)
 	http.HandleFunc("/twitch_link", getAuthLink)
 	http.HandleFunc("/eventsub_cb", eventSubCallback)
+	http.HandleFunc("/", home)
 	chatClient = client
 	tokenMachine = tm
 
@@ -100,8 +101,24 @@ func (c *TwitchAuthClient) Init(client *twitch.Client, tm *TokenMachine) {
 
 }
 
+func home(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	fmt.Fprint(w, "boop.\n")
+}
+
 func twitchAuthCb(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 	code := r.FormValue("code")
+	if code == "" {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 	//scope := r.FormValue("scope")
 	reqUrl := fmt.Sprintf(`https://id.twitch.tv/oauth2/token?client_id=%s&client_secret=%s&code=%s&grant_type=authorization_code&redirect_uri=https://burtbot.app/twitch_authcb`,
 		os.Getenv("BB_APP_CLIENT_ID"),
@@ -132,6 +149,10 @@ func twitchAuthCb(w http.ResponseWriter, r *http.Request) {
 }
 
 func getAuthLink(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 	var buf bytes.Buffer
 	buf.WriteString("https://id.twitch.tv/oauth2/authorize")
 	buf.WriteByte('?')
