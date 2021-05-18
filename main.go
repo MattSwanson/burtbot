@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MattSwanson/burtbot/db"
 	"github.com/MattSwanson/burtbot/commands"
 	"github.com/gempir/go-twitch-irc/v2"
 )
@@ -50,6 +51,20 @@ func main() {
 	readChannel = make(chan string)
 	go connectToOverlay()
 
+	// init db connection
+	err, closeDb := db.Connect()
+	if err != nil {
+		log.Fatalln("failed to connect to db: ", err)
+	}
+	defer closeDb()
+
+	// db.Check()
+
+	/* err = db.AddUser(db.User{12345, "boosttanton"})
+	if err != nil {
+		fmt.Println("error adding user", err)
+	}*/
+
 	client = twitch.NewClient("burtbot11", os.Getenv("BURTBOT_TWITCH_KEY"))
 	client.OnPrivateMessage(handleMessage)
 	client.OnUserPartMessage(handleUserPart)
@@ -84,9 +99,9 @@ func main() {
 	handler.RegisterCommand("joke", &jokes)
 	handler.RegisterCommand("lights", &commands.Lights{})
 	handler.RegisterCommand("time", &commands.Tim{})
-	sb := commands.SuggestionBox{}
-	sb.Init()
-	handler.RegisterCommand("sb", &sb)
+	sb := commands.NewSuggestionBox()
+	//sb.Init()
+	handler.RegisterCommand("sb", sb)
 
 	musicManager := commands.Music{TokenMachine: &tokenMachine}
 	go musicManager.Init()
@@ -127,9 +142,11 @@ func main() {
 	handler.RegisterCommand("protocolr", &commands.ProtoR{})
 	handler.RegisterCommand("incomplete", &commands.Incomplete{})
 
+	//importSuggestions(&twitchAuthClient, sb.Suggestions)
+
 	go handleResults(&plinko, &tokenMachine, &snake, &tanks, &bop)
 
-	err := client.Connect()
+	err = client.Connect()
 	if err != nil {
 		panic(err)
 	}
@@ -143,6 +160,7 @@ func handleMessage(msg twitch.PrivateMessage) {
 	if lower == "!help" {
 		handler.HelpAll()
 	}
+
 	if bopometer.GetBopping() {
 		bops := strings.Count(msg.Message, "BOP")
 		bopometer.AddBops(bops)
@@ -202,7 +220,7 @@ func connectToOverlay() {
 	addr := fmt.Sprintf("%s:8081", os.Getenv("OVERLAY_IP"))
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
-		log.Println("Couldn't connect to overlay")
+		//log.Println("Couldn't connect to overlay")
 		time.Sleep(time.Second * 10)
 		connectToOverlay()
 		return
@@ -308,3 +326,22 @@ func unlockSchlorp() {
 	schlorpLock = false
 	log.Println("schlorp unlocked")
 }
+
+/*func importSuggestions() {
+	for _, sugg := range sugbox.Suggestions {
+		// get twitch user info
+		if sugg.UserID == "" {
+			tu := tac.GetUser(sugg.Username)
+			if tu.UserID == "" {
+				log.Println("couldn't get user info from twitch")
+				continue
+			}
+			sugg.UserID = tu.UserID
+		}
+		// then add the sugg
+		err := db.AddSuggestion(sugg)
+		if err != nil {
+			log.Println("this is a disaster: ", err)
+		}
+	}
+}*/
