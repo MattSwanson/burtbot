@@ -24,7 +24,9 @@ type apiResponse struct {
 }
 
 var jokeLock bool = false
-var jokeCD int = 30 // seconds
+var jokeCD int = 5		 // seconds
+var overloadCD int = 600 // seconds
+var canOverload bool = true
 
 func (j *Joke) Init() {
 	j.jokeModeStop = make(chan bool)
@@ -63,6 +65,15 @@ func (j *Joke) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	}
 
 	if args[1] == "overload" {
+		if !canOverload {
+			client.Say(msg.Channel, "I'm all out of jokes... for a little while.")
+			return
+		}
+		canOverload = false
+		go func(){
+			time.Sleep(time.Second * time.Duration(overloadCD))
+			canOverload = true
+		}()
 		for i := 0; i < 100; i++ {
 			j.TellJoke(client, msg, true)
 		}
