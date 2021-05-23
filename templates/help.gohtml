@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>burtbot command list</title>
+    <style>
+        body {
+            font-family: monospace;
+            background-color: antiquewhite;
+        }
+    </style>
+</head>
+
+<body>
+    <h1> ALL OF THE BURTBOT THINGS </h1>
+        <ul>
+            {{ range . }}
+                <h3>!{{ .Name }}</h3>
+                {{ range .Help }}
+                    <li>{{ . }}</li>
+                {{ end }}
+            {{ end }}
+        </ul>
+</body>
+<html>
