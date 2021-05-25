@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Burtbot Bingo</title>
+    <style>
+        body {
+            font-family: monospace;
+            margin: auto;
+            max-width: 500px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        table {
+            font-size: 64pt;
+        }
+        td {
+            background: antiquewhite;
+            border: 1px solid black;
+            text-align: center;
+        }
+
+        label {
+            display: block;
+        }
+
+        input[type="checkbox"] {
+            appearance: none;
+            display: block;
+            margin: 0;
+        }
+        input[type="checkbox"]:checked + label {
+            background: deepskyblue;
+        }
+        #playerImg {
+            display: block;
+            margin: auto;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>{{.Name}}'s bingo card.</h1>
+    <table>
+        <thead>
+        <tr>
+            <th>B</th><th>I</th><th>N</th><th>G</th><th>O</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            {{range slice .Card 0 5}}
+            <td><input type="checkbox" id="{{.}}"><label for="{{.}}">{{.}}</label></td>
+            {{end}}
+        </tr>
+        <tr>
+            {{range slice .Card 5 10}}
+            <td><input type="checkbox" id="{{.}}"><label for="{{.}}">{{.}}</label></td>
+            {{end}}
+        </tr>
+        <tr>
+            {{range slice .Card 10 12}}
+            <td><input type="checkbox" id="{{.}}"><label for="{{.}}">{{.}}</label></td>
+            {{end}}
+            <td><img id="playerImg" src="{{.ImgSrc}}" alt="FREE" witdh="90" height="90"></td>
+            {{range slice .Card 13 15}}
+            <td><input type="checkbox" id="{{.}}"><label for="{{.}}">{{.}}</label></td>
+            {{end}}
+        </tr>
+        <tr>
+            {{range slice .Card 15 20}}
+            <td><input type="checkbox" id="{{.}}"><label for="{{.}}">{{.}}</label></td>
+            {{end}}
+        </tr>
+        <tr>
+            {{range slice .Card 20 25}}
+            <td><input type="checkbox" id="{{.}}"><label for="{{.}}">{{.}}</label></td>
+            {{end}}
+        </tr>
+        </tbody>
+    </table> 
+</body>
+</html>

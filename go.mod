@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/gempir/go-twitch-irc/v2 v2.5.0
 	github.com/golang/protobuf v1.4.2 // indirect
+	github.com/google/btree v1.0.1 // indirect
 	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/jackc/pgx/v4 v4.11.0
 	github.com/lib/pq v1.10.1 // indirect
