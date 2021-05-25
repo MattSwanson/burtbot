@@ -201,6 +201,15 @@ func (t *TokenMachine) OnUserPart(client *twitch.Client, msg twitch.UserPartMess
 
 }
 
+func (t *TokenMachine) DeductTokens(username string, number int) bool {
+	balance, _ := t.Tokens[strings.ToLower(username)]
+	if balance < number {
+		return false
+	}
+	t.Tokens[strings.ToLower(username)] = balance - number
+	return true
+}
+
 func (t *TokenMachine) GrantToken(username string, number int) {
 	t.Tokens[strings.ToLower(username)] += number
 	if t.persist {

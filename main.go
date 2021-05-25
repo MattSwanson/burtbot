@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"net/http"
 	"github.com/MattSwanson/burtbot/db"
 	"github.com/MattSwanson/burtbot/commands"
 	"github.com/gempir/go-twitch-irc/v2"
@@ -30,19 +29,6 @@ var schlorpCD = 10
 var commChannel chan string
 var readChannel chan string
 
-// var twitchAuthCh chan bool
-// var twitchAuth bool
-// var twitchAccessToken string
-// var twitchRefreshToken string
-
-// type twitchAuthResp struct {
-// 	Access_token  string
-// 	Refresh_token string
-// 	Expires_in    int
-// 	Scope         []string
-// 	Token_type    string
-// }
-
 var bopometer *commands.Bopometer
 
 func main() {
@@ -57,13 +43,6 @@ func main() {
 		log.Fatalln("failed to connect to db: ", err)
 	}
 	defer closeDb()
-
-	// db.Check()
-
-	/* err = db.AddUser(db.User{12345, "boosttanton"})
-	if err != nil {
-		fmt.Println("error adding user", err)
-	}*/
 
 	client = twitch.NewClient("burtbot11", os.Getenv("BURTBOT_TWITCH_KEY"))
 	client.OnPrivateMessage(handleMessage)
@@ -87,15 +66,6 @@ func main() {
 	go twitchAuthClient.Init(client, &tokenMachine)
 
 	client.Join("burtstanton")
-
-	// Add handlers for http stuffs
-	http.HandleFunc("/twitch_authcb", commands.TwitchAuthCb)
-	http.HandleFunc("/twitch_link", commands.GetAuthLink)
-	http.HandleFunc("/eventsub_cb", commands.EventSubCallback)
-	http.HandleFunc("/", home)
-
-	// Create a web server to listen on HTTPS
-	go http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/burtbot.app/fullchain.pem", "/etc/letsencrypt/live/burtbot.app/privkey.pem", nil)
 
 	//handler.RegisterCommand("nonillion", commands.Nonillion{})
 	handler.RegisterCommand("ded", &commands.Ded{})
@@ -150,11 +120,13 @@ func main() {
 
 	handler.RegisterCommand("protocolr", &commands.ProtoR{})
 	handler.RegisterCommand("incomplete", &commands.Incomplete{})
-
+	bingo := commands.NewBingo(&twitchAuthClient, &tokenMachine, commChannel)
+	handler.RegisterCommand("bingo", bingo)
 	//importSuggestions(&twitchAuthClient, sb.Suggestions)
 
 	go handleResults(&plinko, &tokenMachine, &snake, &tanks, &bop)
-
+	StartWebServer(handler)
+	
 	err = client.Connect()
 	if err != nil {
 		panic(err)
@@ -168,6 +140,10 @@ func handleMessage(msg twitch.PrivateMessage) {
 	lower := strings.ToLower(msg.Message)
 	if lower == "!help" {
 		handler.HelpAll()
+	}
+	if lower == "!commands" {
+		client.Say(msg.Channel, "See available commands at: https://burtbot.app/commands")
+		return
 	}
 
 	if bopometer.GetBopping() {
@@ -186,6 +162,7 @@ func handleMessage(msg twitch.PrivateMessage) {
 	if lower == "d" {
 		commChannel <- "right"
 	}
+	
 	go handler.HandleMsg(msg)
 	go bbset.HandleMsg(client, msg)
 	if strings.Compare(msg.User.Name, lastMsg.User.Name) == 0 && strings.Compare(msg.Message, lastMessage+" "+lastMessage) == 0 {
@@ -335,30 +312,3 @@ func unlockSchlorp() {
 	schlorpLock = false
 	log.Println("schlorp unlocked")
 }
-
-func home(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	fmt.Fprint(w, "boop.\n")
-}
-
-/*func importSuggestions() {
-	for _, sugg := range sugbox.Suggestions {
-		// get twitch user info
-		if sugg.UserID == "" {
-			tu := tac.GetUser(sugg.Username)
-			if tu.UserID == "" {
-				log.Println("couldn't get user info from twitch")
-				continue
-			}
-			sugg.UserID = tu.UserID
-		}
-		// then add the sugg
-		err := db.AddSuggestion(sugg)
-		if err != nil {
-			log.Println("this is a disaster: ", err)
-		}
-	}
-}*/
