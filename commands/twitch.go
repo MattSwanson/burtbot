@@ -76,9 +76,10 @@ func (c *TwitchAuthClient) Init(client *twitch.Client, tm *TokenMachine) {
 	http.HandleFunc("/twitch_link", getAuthLink)
 	http.HandleFunc("/eventsub_cb", eventSubCallback)
 	http.HandleFunc("/", home)
+	*/
 	chatClient = client
 	tokenMachine = tm
-	*/
+	
 	// go http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/burtbot.app/fullchain.pem", "/etc/letsencrypt/live/burtbot.app/privkey.pem", nil)
 	twitchAuth = <-twitchAuthCh
 	fmt.Println("Auth'd for twitch api")
