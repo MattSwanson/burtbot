@@ -64,6 +64,7 @@ func (b *Bingo) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 				// winrar
 				numTokens := cardCost * len(b.players)
 				client.Say(msg.Channel, fmt.Sprintf("@%s has Bingo! They win %d tokens!", msg.User.DisplayName, numTokens))
+				b.tcpChannel <- fmt.Sprintf("bingo winner %s %d", msg.User.DisplayName, numTokens)
 				// alot tokens to winrar
 				b.tokenMachine.GrantToken(msg.User.DisplayName, numTokens)
 				b.drawCancelFunc()
@@ -105,8 +106,10 @@ func (b *Bingo) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	}
 
 	if args[1] == "stop" && b.running && isMod(msg.User) {
+		client.Say(msg.Channel, "Deactivating Bingo circuits.")
 		b.running = false
 		b.drawCancelFunc()
+		b.tcpChannel <- "bingo reset"
 	}
 
 }
@@ -138,6 +141,7 @@ func (b *Bingo) Start(client *twitch.Client, channelName string) {
 		if b.drawCancelFunc != nil {
 			b.drawCancelFunc()
 		}
+		b.tcpChannel <- "bingo reset"
 		rand.Seed(time.Now().UnixNano())
 		b.players = map[string]player{}
 		b.fillHopper()
@@ -160,6 +164,8 @@ func (b *Bingo) Start(client *twitch.Client, channelName string) {
 				case <-t.C:
 					if len(b.hopper) <= 0 {
 						client.Say(chatChannel, "There are no balls left... is anyone even paying attention?")
+						client.Say(chatChannel, "Looks like no one won bingo... starting another game soon")
+						b.Start(client, chatChannel)
 						return
 					}
 					drawn := b.drawBall()
