@@ -30,7 +30,7 @@ func (s *Snake) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			s.isRunning = false
 		}
 	} else if len(args) >= 2 && args[1] == "speed" {
-		if s.isRunning && isMod(msg.User) {
+		if s.isRunning && IsMod(msg.User) {
 			n, err := strconv.Atoi(args[2])
 			if err != nil {
 				return
@@ -51,7 +51,7 @@ func (s *Snake) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 func (s *Snake) Help() []string {
 	return []string{
 		"!snake start|stop starts or stops snake...",
-		"Type a, s, d or f to move plinko around the screen",
+		"Type w, a, s, d to move plinko around the screen",
 		"Eat square apples and squeek",
 	}
 }

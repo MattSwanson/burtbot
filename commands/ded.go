@@ -26,7 +26,7 @@ func (d *Ded) Init() {
 }
 
 func (d *Ded) Run(client *twitch.Client, msg twitch.PrivateMessage) {
-	if locked && !isMod(msg.User) {
+	if locked && !IsMod(msg.User) {
 		return
 	}
 	// Mods can run this during cooldown - but don't elongate the cooldown
@@ -42,7 +42,7 @@ func (d *Ded) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	count := -1
 	var err error
 	if len(args) == 2 {
-		if !isMod(msg.User) {
+		if !IsMod(msg.User) {
 			client.Say(msg.Channel, "Only mods can set the counter directly.")
 			return
 		}

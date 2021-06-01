@@ -34,7 +34,7 @@ func (j *Joke) Init() {
 }
 
 func (j *Joke) Run(client *twitch.Client, msg twitch.PrivateMessage) {
-	if jokeLock && !isMod(msg.User) {
+	if jokeLock && !IsMod(msg.User) {
 		return
 	}
 	if !jokeLock {
@@ -47,7 +47,7 @@ func (j *Joke) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		return
 	}
 
-	if args[1] == "mode" && isMod(msg.User) {
+	if args[1] == "mode" && IsMod(msg.User) {
 		if len(args) < 3 {
 			return
 		}

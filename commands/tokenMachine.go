@@ -172,7 +172,7 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	}
 
 	if args[1] == "set" {
-		if !isMod(msg.User) || len(args) < 4 {
+		if !IsMod(msg.User) || len(args) < 4 {
 			return
 		}
 		n, err := strconv.Atoi(args[3])
@@ -184,7 +184,7 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	}
 
 	if args[1] == "grant" {
-		if !isMod(msg.User) || len(args) < 4 {
+		if !IsMod(msg.User) || len(args) < 4 {
 			return
 		}
 		n, err := strconv.Atoi(args[3])

@@ -77,7 +77,7 @@ func (b *Bingo) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		return
 	}
 	// !bingo start
-	if args[1] == "start" && isMod(msg.User) {
+	if args[1] == "start" && IsMod(msg.User) {
 		b.Start(client, msg.Channel)
 		return
 	}
@@ -105,7 +105,7 @@ func (b *Bingo) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		client.Say(msg.Channel, fmt.Sprintf("@%s see your card here: %s", msg.User.DisplayName, url))
 	}
 
-	if args[1] == "stop" && b.running && isMod(msg.User) {
+	if args[1] == "stop" && b.running && IsMod(msg.User) {
 		client.Say(msg.Channel, "Deactivating Bingo circuits.")
 		b.running = false
 		b.drawCancelFunc()

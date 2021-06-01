@@ -40,7 +40,7 @@ func (b *Bbset) Init() {
 // Run will be used to set commands, then commands will be run from a different method
 func (b *Bbset) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	//fmt.Println("")
-	if !isMod(msg.User) {
+	if !IsMod(msg.User) {
 		return
 	}
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))

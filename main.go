@@ -81,7 +81,7 @@ func main() {
 	handler.RegisterCommand("joke", &jokes)
 	handler.RegisterCommand("lights", &commands.Lights{})
 	handler.RegisterCommand("time", &commands.Tim{})
-	sb := commands.NewSuggestionBox()
+	sb := commands.NewSuggestionBox(commChannel)
 	//sb.Init()
 	handler.RegisterCommand("sb", sb)
 
@@ -127,6 +127,7 @@ func main() {
 	handler.RegisterCommand("bingo", bingo)
 	//importSuggestions(&twitchAuthClient, sb.Suggestions)
 
+	handler.LoadAliases()
 	go handleResults(&plinko, &tokenMachine, &snake, &tanks, &bop)
 	StartWebServer(handler)
 	
@@ -149,9 +150,16 @@ func handleMessage(msg twitch.PrivateMessage) {
 	}
 
 	fields := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
-	if fields[0] == "delete" && len(fields) == 2 {
-		deleteMessageByMsgID(fields[1])
-	}	
+	if commands.IsMod(msg.User) && fields[0] == "alias" && len(fields) == 4 {
+		// !alias add alias command
+		if fields[1] == "add" {
+			err := handler.RegisterAlias(fields[2], fields[3])			
+			if err != nil {
+				client.Say(msg.Channel, fmt.Sprintf("Can not create alias, command %s doesn't exist. Apparently.", fields[3]))
+			}
+			return
+		}
+	}
 
 	if lower == "!commands" {
 		client.Say(msg.Channel, "See available commands at: https://burtbot.app/commands")
@@ -174,7 +182,8 @@ func handleMessage(msg twitch.PrivateMessage) {
 	if lower == "d" {
 		commChannel <- "right"
 	}
-	
+
+
 	go handler.HandleMsg(msg)
 	go bbset.HandleMsg(client, msg)
 	if strings.Compare(msg.User.Name, lastMsg.User.Name) == 0 && strings.Compare(msg.Message, lastMessage+" "+lastMessage) == 0 {

@@ -8,8 +8,15 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"os"
+	"log"
+	"encoding/json"
 
 	"github.com/gempir/go-twitch-irc/v2"
+)
+
+const (
+	aliasesFileName = "./aliases.json"
 )
 
 type Command interface {
@@ -22,6 +29,7 @@ type Command interface {
 type CmdHandler struct {
 	Client     *twitch.Client
 	Commands   map[string]Command
+	aliases	   map[string]string
 	TcpChannel chan string
 }
 
@@ -33,6 +41,7 @@ func NewCmdHandler(client *twitch.Client, tcpChannel chan string) *CmdHandler {
 	return &CmdHandler{
 		Client:     client,
 		Commands:   make(map[string]Command),
+		aliases:	make(map[string]string),
 		TcpChannel: tcpChannel,
 	}
 }
@@ -71,7 +80,7 @@ func (handler *CmdHandler) HandlePartMsg(msg twitch.UserPartMessage) {
 	}
 }
 
-func isMod(user twitch.User) bool {
+func IsMod(user twitch.User) bool {
 	_, bcOk := user.Badges["broadcaster"]
 	_, modOk := user.Badges["moderator"]
 	return bcOk || modOk
@@ -85,5 +94,53 @@ func (handler *CmdHandler) HelpAll() {
 			handler.TcpChannel <- fmt.Sprintf("tts true %s", h)
 			handler.TcpChannel <- fmt.Sprintf("marquee once {\"rawMessage\":\"%s\"}", h)
 		}
+	}
+}
+
+func (handler *CmdHandler) LoadAliases() {
+	j, err := os.ReadFile(aliasesFileName)
+	if err != nil {
+		log.Println("couldn't load aliases from file")
+		return
+	}
+	err = json.Unmarshal(j, &handler.aliases)
+	if err != nil {
+		log.Println("invalid json in aliases file")
+	}
+	for alias, commandName := range handler.aliases {
+		if err := handler.RegisterAlias(alias, commandName); err != nil {
+			log.Println("couldn't register alias from file")
+		}
+	}
+}
+
+func (handler *CmdHandler) RegisterAlias(alias, commandName string) error {
+	// check to see if the command exists in the commands map
+	cmd, ok := handler.Commands[commandName]
+	if !ok { 
+		return errors.New("command doesn't exist, can not assign alias")
+	}
+	handler.Commands[alias] = cmd
+	handler.aliases[alias] = commandName
+	handler.saveAliasesToFile()
+	return nil
+}
+
+func (handler *CmdHandler) RemoveAlias(alias string) {
+	if _, ok := handler.Commands[alias]; ok {
+		delete(handler.Commands, alias)
+		delete(handler.aliases, alias)
+		handler.saveAliasesToFile()
+	}
+}
+
+func (handler *CmdHandler) saveAliasesToFile() {
+	json, err := json.Marshal(handler.aliases)
+	if err != nil {
+		log.Println("couldn't convert alias map to json")
+		return
+	}
+	if err := os.WriteFile(aliasesFileName, json, 0644); err != nil {
+		log.Println(err.Error())
 	}
 }

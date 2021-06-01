@@ -20,7 +20,7 @@ func (s *Shoutout) Init() {
 }
 
 func (s *Shoutout) Run(client *twitch.Client, msg twitch.PrivateMessage) {
-	if !isMod(msg.User) {
+	if !IsMod(msg.User) {
 		return
 	}
 	if !s.TwitchClient.GetAuthStatus() {

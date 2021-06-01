@@ -16,9 +16,10 @@ import (
 
 type SuggestionBox struct {
 	Suggestions []db.Suggestion
+	TcpChannel chan string
 }
 
-func NewSuggestionBox() *SuggestionBox {
+func NewSuggestionBox(tcpChannel chan string) *SuggestionBox {
 	suggestions := []db.Suggestion{}
 	j, err := os.ReadFile("./suggestions.json")
 	if err != nil {
@@ -30,6 +31,7 @@ func NewSuggestionBox() *SuggestionBox {
 	}
 	return &SuggestionBox{
 		Suggestions: suggestions,
+		TcpChannel: tcpChannel,
 	}
 }
 
@@ -81,6 +83,12 @@ func (sb *SuggestionBox) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	}
 	if args[1] == "count" {
 		client.Say(msg.Channel, fmt.Sprintf("There have been %d very good and reasonable suggestions.", len(sb.Suggestions)))
+	}
+
+	if args[1] == "all" {
+		for _, suggestion := range sb.Suggestions {
+			sb.TcpChannel <- fmt.Sprintf("tts %s suggested that we %s", suggestion.Username, suggestion.Text)		
+		}
 	}
 }
 
