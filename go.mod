@@ -9,6 +9,7 @@ require (
 	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/jackc/pgx/v4 v4.11.0
 	github.com/lib/pq v1.10.1 // indirect
+	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/zmb3/spotify v1.1.1
 	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4 // indirect
