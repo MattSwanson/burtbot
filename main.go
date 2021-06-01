@@ -19,6 +19,7 @@ import (
 var handler *commands.CmdHandler
 var client *twitch.Client
 var bbset commands.Bbset
+var chatMessages []twitch.PrivateMessage
 
 var lastMessage string
 var lastMsg twitch.PrivateMessage
@@ -48,6 +49,8 @@ func main() {
 	client.OnPrivateMessage(handleMessage)
 	client.OnUserPartMessage(handleUserPart)
 	client.OnUserJoinMessage(handleUserJoin)
+	client.OnClearMessage(handleClearMessage)
+	client.OnClearChatMessage(handleClearChatMessage)
 	client.OnConnect(func() {
 		fmt.Println("burtbot circuits activated")
 	})
@@ -134,6 +137,9 @@ func main() {
 }
 
 func handleMessage(msg twitch.PrivateMessage) {
+
+	showMessageOnConsole(msg)
+	
 	if msg.User.DisplayName == "tundragaminglive" {
 		commChannel <- "miracle"
 	}
@@ -141,6 +147,12 @@ func handleMessage(msg twitch.PrivateMessage) {
 	if lower == "!help" {
 		handler.HelpAll()
 	}
+
+	fields := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
+	if fields[0] == "delete" && len(fields) == 2 {
+		deleteMessageByMsgID(fields[1])
+	}	
+
 	if lower == "!commands" {
 		client.Say(msg.Channel, "See available commands at: https://burtbot.app/commands")
 		return
@@ -237,7 +249,7 @@ func getMessagesFromTCP(conn net.Conn) {
 	scanner := bufio.NewScanner(conn)
 	for scanner.Scan() {
 		s := scanner.Text()
-		fmt.Println(s)
+		//fmt.Println(s)
 		readChannel <- s
 	}
 	if err := scanner.Err(); err != nil {
