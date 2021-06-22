@@ -2,8 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"log"
-	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -12,7 +10,9 @@ import (
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
-type Lights struct{}
+type Lights struct{
+	TcpChannel chan string
+}
 
 var lightLock bool = false
 var lightCD int = 5
@@ -24,6 +24,10 @@ const (
 	green int = 25500
 	blue  int = 46920
 )
+
+func NewLights(tcpChannel chan string) *Lights {
+	return &Lights{tcpChannel}
+}
 
 func (l *Lights) Init() {
 
@@ -65,22 +69,8 @@ func (l *Lights) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		return
 	}
 
-	endPoint := fmt.Sprintf("http://10.0.0.2/api/%s/groups/1/action", bridgeID)
-	reqBody := fmt.Sprintf(`{"on":true, "hue":%d}`, color)
-	br := strings.NewReader(reqBody)
-	req, err := http.NewRequest("PUT", endPoint, br)
-	if err != nil {
-		client.Say(msg.Channel, "Lights needs to be refilled")
-		log.Println(err.Error())
-		lightLock = false
-		return
-	}
-	_, err = http.DefaultClient.Do(req)
-	if err != nil {
-		log.Println(err.Error())
-		lightLock = false
-		return
-	}
+	l.TcpChannel <- fmt.Sprintf("lights set %d", color)
+
 	go func() {
 		time.Sleep(time.Second * time.Duration(lightCD))
 		lightLock = false
