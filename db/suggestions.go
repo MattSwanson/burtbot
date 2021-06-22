@@ -60,3 +60,11 @@ func GetSuggestions() ([]Suggestion, error) {
 	}
 	return suggestions, nil
 }
+
+func DeleteSuggestion(id int) error {
+	_, err := DbPool.Exec(context.Background(),
+	`DELETE FROM suggestions 
+	 WHERE id = $1`,
+	 id)
+	return err
+}
