@@ -10,8 +10,9 @@ import (
 const numMessages = 7
 
 func getColorEscapeCode(hexColor string) string {
+	colorCode := 34
 	if hexColor == "" {
-
+		return fmt.Sprintf("\033[%dm", colorCode)
 	}
 	c, err := colorful.Hex(hexColor)
 	if err != nil {
@@ -30,7 +31,6 @@ func getColorEscapeCode(hexColor string) string {
 		ih += 60 - r
 	}
 	ih = ih % 360
-	var colorCode int
 	switch ih {
 		case 0:
 			colorCode = 31
