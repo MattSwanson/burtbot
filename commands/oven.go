@@ -49,7 +49,7 @@ func (o *Oven) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			client.Say(msg.Channel, fmt.Sprintf("Ding! Oven is heated to %d", temp))
 		}()
 	case "temp":
-		client.Say(msg.Channel, fmt.Sprintf("Oven is at %df", o.Temperature))
+		client.Say(msg.Channel, fmt.Sprintf("Oven is at %d degrees", o.Temperature))
 	}
 }
 
