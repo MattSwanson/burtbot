@@ -7,12 +7,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
-type Lights struct{
-	TcpChannel chan string
-}
+type Lights struct{}
 
 var lightLock bool = false
 var lightCD int = 5
@@ -25,8 +24,8 @@ const (
 	blue  int = 46920
 )
 
-func NewLights(tcpChannel chan string) *Lights {
-	return &Lights{tcpChannel}
+func NewLights() *Lights {
+	return &Lights{}
 }
 
 func (l *Lights) Init() {
@@ -69,7 +68,7 @@ func (l *Lights) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		return
 	}
 
-	l.TcpChannel <- fmt.Sprintf("lights set %d", color)
+	comm.ToOverlay(fmt.Sprintf("lights set %d", color))
 
 	go func() {
 		time.Sleep(time.Second * time.Duration(lightCD))

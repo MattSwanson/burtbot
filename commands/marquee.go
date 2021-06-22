@@ -6,12 +6,11 @@ import (
 	"log"
 	"strings"
 
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
-type Marquee struct {
-	TcpChannel chan string
-}
+type Marquee struct {}
 
 type MarqueeMsg struct {
 	RawMessage string `json:"rawMessage"`
@@ -31,7 +30,7 @@ func (n *Marquee) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		return
 	}
 	if args[1] == "off" {
-		n.TcpChannel <- "marquee off"
+		comm.ToOverlay("marquee off")
 	}
 	var offset int
 	if args[1] == "set" {
@@ -50,7 +49,7 @@ func (n *Marquee) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		log.Println(err.Error())
 		return
 	}
-	n.TcpChannel <- fmt.Sprintf("marquee %s %s", args[1], string(j))
+	comm.ToOverlay(fmt.Sprintf("marquee %s %s", args[1], string(j)))
 }
 
 func (n *Marquee) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {

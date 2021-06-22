@@ -1,18 +1,16 @@
 package main
 
 import (
-	"bufio"
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
-	"net"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 	"github.com/MattSwanson/burtbot/db"
 	"github.com/MattSwanson/burtbot/commands"
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
@@ -37,7 +35,7 @@ func main() {
 
 	commChannel = make(chan string)
 	readChannel = make(chan string)
-	go connectToOverlay()
+	go comm.ConnectToOverlay()
 
 	// init db connection
 	err, closeDb := db.Connect()
@@ -56,7 +54,7 @@ func main() {
 		fmt.Println("burtbot circuits activated")
 	})
 
-	handler = commands.NewCmdHandler(client, commChannel)
+	handler = commands.NewCmdHandler(client)
 
 	burtCoin := commands.BurtCoin{}
 	burtCoin.Init()
@@ -74,20 +72,17 @@ func main() {
 	//handler.RegisterCommand("nonillion", commands.Nonillion{})
 	handler.RegisterCommand("ded", &commands.Ded{})
 	handler.RegisterCommand("oven", &commands.Oven{Temperature: 65, BakeTemp: 0})
-	handler.RegisterCommand("bbmsg", &commands.Msg{TcpChannel: commChannel})
+	handler.RegisterCommand("bbmsg", &commands.Msg{})
 	handler.RegisterCommand("offbyone", &commands.OffByOneCounter{})
 
-	jokes := commands.Joke{TcpChannel: commChannel}
+	jokes := commands.Joke{}
 	jokes.Init()
 	handler.RegisterCommand("joke", &jokes)
 	
-	lights := commands.NewLights(commChannel)
-	handler.RegisterCommand("lights", lights)
+	handler.RegisterCommand("lights", commands.NewLights())
 
 	handler.RegisterCommand("time", &commands.Tim{})
-	sb := commands.NewSuggestionBox(commChannel)
-	//sb.Init()
-	handler.RegisterCommand("sb", sb)
+	handler.RegisterCommand("sb", commands.NewSuggestionBox())
 
 	musicManager := commands.Music{TokenMachine: &tokenMachine}
 	go musicManager.Init()
@@ -97,30 +92,24 @@ func main() {
 	bbset.Init()
 	handler.RegisterCommand("bbset", &bbset)
 
-	bop := commands.Bopometer{Music: &musicManager, TCPChannel: commChannel}
+	bop := commands.Bopometer{Music: &musicManager}
 	bop.Init()
 	handler.RegisterCommand("bop", &bop)
 	bopometer = &bop
 
-	goph := commands.Gopher{TcpChannel: commChannel}
-	handler.RegisterCommand("go", &goph)
+	handler.RegisterCommand("go", &commands.Gopher{})
+	handler.RegisterCommand("bigmouse", &commands.BigMouse{})
 
-	bigMouse := commands.BigMouse{TcpChannel: commChannel}
-	handler.RegisterCommand("bigmouse", &bigMouse)
-
-	snake := commands.Snake{TcpChannel: commChannel}
+	snake := commands.Snake{}
 	handler.RegisterCommand("snake", &snake)
+	handler.RegisterCommand("marquee", &commands.Marquee{})
+	handler.RegisterCommand("so", &commands.Shoutout{TwitchClient: &twitchAuthClient})
+	handler.RegisterCommand("error", &commands.ErrorBox{})
 
-	marquee := commands.Marquee{TcpChannel: commChannel}
-	handler.RegisterCommand("marquee", &marquee)
-
-	handler.RegisterCommand("so", &commands.Shoutout{TcpChannel: commChannel, TwitchClient: &twitchAuthClient})
-	handler.RegisterCommand("error", &commands.ErrorBox{TcpChannel: commChannel})
-
-	plinko := commands.Plinko{TcpChannel: commChannel, TokenMachine: &tokenMachine}
+	plinko := commands.Plinko{TokenMachine: &tokenMachine}
 	handler.RegisterCommand("plinko", &plinko)
 
-	tanks := commands.Tanks{TcpChannel: commChannel}
+	tanks := commands.Tanks{}
 	handler.RegisterCommand("tanks", &tanks)
 
 	lightsOut := commands.LightsOut{CommChannel: commChannel}
@@ -189,16 +178,16 @@ func handleMessage(msg twitch.PrivateMessage) {
 		bopometer.AddBops(bops)
 	}
 	if lower == "w" {
-		commChannel <- "up"
+		comm.ToOverlay("up")
 	}
 	if lower == "a" {
-		commChannel <- "left"
+		comm.ToOverlay("left")
 	}
 	if lower == "s" {
-		commChannel <- "down"
+		comm.ToOverlay("down")
 	}
 	if lower == "d" {
-		commChannel <- "right"
+		comm.ToOverlay("right")
 	}
 
 
@@ -223,7 +212,7 @@ func handleMessage(msg twitch.PrivateMessage) {
 	// 	commChannel <- "quack"
 	// }
 	if count := strings.Count(lower, "quack"); count > 0 {
-		commChannel <- fmt.Sprintf("quack %d", count)
+		comm.ToOverlay(fmt.Sprintf("quack %d", count))
 	}
 
 	lastMessage = msg.Message
@@ -241,48 +230,7 @@ func handleUserJoin(msg twitch.UserJoinMessage) {
 	//log.Printf(`%s has joined the channel.`, msg.User)
 }
 
-func connectToOverlay() {
-	addr := fmt.Sprintf("%s:8081", os.Getenv("OVERLAY_IP"))
-	conn, err := net.Dial("tcp", addr)
-	if err != nil {
-		//log.Println("Couldn't connect to overlay")
-		time.Sleep(time.Second * 10)
-		connectToOverlay()
-		return
-	}
-	defer conn.Close()
-	go func() {
-		getMessagesFromTCP(conn)
-	}()
-	ctx, cancelPing := context.WithCancel(context.Background())
-	pingOverlay(ctx, commChannel)
-	fmt.Println("Connected to overlay")
-	for {
-		s := <-commChannel
-		// fmt.Println(s)
-		_, err := fmt.Fprintf(conn, "%s\n", s)
-		if err != nil {
-			// we know we have no connection, stop pinging until we reconnect
-			cancelPing()
-			log.Println("Lost connection to overlay... will retry in 5 sec.")
-			readChannel <- "reset"
-			time.Sleep(time.Second * 5)
-			connectToOverlay()
-		}
-	}
-}
 
-func getMessagesFromTCP(conn net.Conn) {
-	scanner := bufio.NewScanner(conn)
-	for scanner.Scan() {
-		s := scanner.Text()
-		//fmt.Println(s)
-		readChannel <- s
-	}
-	if err := scanner.Err(); err != nil {
-		log.Println(err)
-	}
-}
 
 func handleResults(
 	p *commands.Plinko,
@@ -330,21 +278,6 @@ func handleResults(
 	}
 }
 
-// put a ping on the comm channel every 3 seconds to make sure we still have a connection
-func pingOverlay(ctx context.Context, c chan string) {
-	go func(ctx context.Context) {
-		t := time.NewTicker(time.Second * 3)
-		defer t.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-t.C:
-				c <- "ping"
-			}
-		}
-	}(ctx)
-}
 
 func unlockSchlorp() {
 	time.Sleep(time.Second * time.Duration(schlorpCD))

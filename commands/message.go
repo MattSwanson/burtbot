@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
-type Msg struct {
-	TcpChannel chan string
-}
+type Msg struct {}
 
 func (m *Msg) Init() {
 
@@ -25,7 +24,7 @@ func (m *Msg) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		return
 	}
 	newMsg := strings.Join(args[1:], " ")
-	m.TcpChannel <- fmt.Sprintf("tts false %s", newMsg)
+	comm.ToOverlay(fmt.Sprintf("tts false %s", newMsg))
 }
 
 func (m *Msg) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {

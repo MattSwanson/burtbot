@@ -5,11 +5,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
 type Snake struct {
-	TcpChannel chan string
 	isRunning  bool
 }
 
@@ -21,12 +21,12 @@ func (s *Snake) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	args := strings.Fields(strings.ToLower(msg.Message))
 	if len(args) < 2 || args[1] == "start" {
 		if !s.isRunning {
-			s.TcpChannel <- "snake start"
+			comm.ToOverlay("snake start")
 			s.isRunning = true
 		}
 	} else if len(args) >= 2 && args[1] == "stop" {
 		if s.isRunning {
-			s.TcpChannel <- "snake stop"
+			comm.ToOverlay("snake stop")
 			s.isRunning = false
 		}
 	} else if len(args) >= 2 && args[1] == "speed" {
@@ -35,7 +35,7 @@ func (s *Snake) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			if err != nil {
 				return
 			}
-			s.TcpChannel <- fmt.Sprintf("snake speed %d", n)
+			comm.ToOverlay(fmt.Sprintf("snake speed %d", n))
 		}
 	}
 }

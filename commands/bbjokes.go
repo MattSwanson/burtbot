@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
 type Joke struct {
-	TcpChannel   chan string
 	jokeMode     bool
 	jokeModeStop chan bool
 }
@@ -114,7 +114,7 @@ func (j *Joke) TellJoke(client *twitch.Client, msg twitch.PrivateMessage, voiceO
 	}
 
 	stripped := strings.ReplaceAll(r.Joke, "\n", " ")
-	j.TcpChannel <- fmt.Sprintf("tts true %s", stripped)
+	comm.ToOverlay(fmt.Sprintf("tts true %s", stripped))
 
 	// Some jokes have \r\n in them - I think we need to filter those out
 	if voiceOnly {

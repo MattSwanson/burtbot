@@ -1,19 +1,18 @@
 package commands
 
 import (
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
-type BigMouse struct {
-	TcpChannel chan string
-}
+type BigMouse struct {}
 
 func (m *BigMouse) Init() {
 
 }
 
 func (m *BigMouse) Run(client *twitch.Client, msg twitch.PrivateMessage) {
-	m.TcpChannel <- "bigmouse"
+	comm.ToOverlay("bigmouse")
 }
 
 func (m *BigMouse) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {

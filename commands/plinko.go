@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
 type Plinko struct {
-	TcpChannel   chan string
 	TokenMachine *TokenMachine
 	running      bool
 }
@@ -34,7 +34,7 @@ func (p *Plinko) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			cost = 9
 		}
 		p.TokenMachine.setTokenCount(msg.User.Name, numTokens-cost)
-		p.TcpChannel <- fmt.Sprintf("plinko drop %s %s %s", args[2], msg.User.DisplayName, msg.User.Color)
+		comm.ToOverlay(fmt.Sprintf("plinko drop %s %s %s", args[2], msg.User.DisplayName, msg.User.Color))
 	}
 
 }
@@ -44,7 +44,7 @@ func (p *Plinko) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 }
 
 func (p *Plinko) Stop() {
-	p.TcpChannel <- "plinko stop"
+	comm.ToOverlay("plinko stop")
 	p.running = false
 }
 

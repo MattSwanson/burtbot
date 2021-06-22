@@ -10,7 +10,6 @@ import (
 )
 
 type Shoutout struct {
-	TcpChannel   chan string
 	TwitchClient *TwitchAuthClient
 	//customMessages map[string]string // key is username, value is a message to display
 }

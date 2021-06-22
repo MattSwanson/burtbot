@@ -5,11 +5,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
 type Tanks struct {
-	TcpChannel   chan string
 	TwitchClient *TwitchAuthClient
 	running      bool
 	//currentPlayers []twitch.User
@@ -25,16 +25,16 @@ func (t *Tanks) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		return
 	}
 	if args[1] == "start" && !t.running {
-		t.TcpChannel <- "tanks start"
+		comm.ToOverlay("tanks start")
 		t.running = true
 	} else if args[1] == "stop" && t.running {
-		t.TcpChannel <- "tanks stop"
+		comm.ToOverlay("tanks stop")
 		t.running = false
 	} else if args[1] == "join" && t.running {
 		u := t.TwitchClient.GetUser(msg.User.Name)
-		t.TcpChannel <- fmt.Sprintf("tanks join %s %s", msg.User.DisplayName, u.ProfileImgURL)
+		comm.ToOverlay(fmt.Sprintf("tanks join %s %s", msg.User.DisplayName, u.ProfileImgURL))
 	} else if args[1] == "reset" && t.running && IsMod(msg.User) {
-		t.TcpChannel <- "tanks reset"
+		comm.ToOverlay("tanks reset")
 	} else if args[1] == "shoot" && t.running {
 		// args[2] will be angle in degrees - int
 		// args[3] will be velo - float
@@ -53,9 +53,9 @@ func (t *Tanks) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			return
 		}
 
-		t.TcpChannel <- fmt.Sprintf("tanks shoot %s %d %.4f", msg.User.DisplayName, angle, v)
+		comm.ToOverlay(fmt.Sprintf("tanks shoot %s %d %.4f", msg.User.DisplayName, angle, v))
 	} else if args[1] == "begin" {
-		t.TcpChannel <- "tanks begin"
+		comm.ToOverlay("tanks begin")
 	}
 }
 

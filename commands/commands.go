@@ -12,6 +12,7 @@ import (
 	"log"
 	"encoding/json"
 
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
@@ -30,19 +31,17 @@ type CmdHandler struct {
 	Client     *twitch.Client
 	Commands   map[string]Command
 	aliases	   map[string]string
-	TcpChannel chan string
 }
 
 // type Command struct {
 // 	Run func(twitch.PrivateMessage)
 // }
 
-func NewCmdHandler(client *twitch.Client, tcpChannel chan string) *CmdHandler {
+func NewCmdHandler(client *twitch.Client) *CmdHandler {
 	return &CmdHandler{
 		Client:     client,
 		Commands:   make(map[string]Command),
 		aliases:	make(map[string]string),
-		TcpChannel: tcpChannel,
 	}
 }
 
@@ -91,8 +90,8 @@ func IsMod(user twitch.User) bool {
 func (handler *CmdHandler) HelpAll() {
 	for _, cmd := range handler.Commands {
 		for _, h := range cmd.Help() {
-			handler.TcpChannel <- fmt.Sprintf("tts true %s", h)
-			handler.TcpChannel <- fmt.Sprintf("marquee once {\"rawMessage\":\"%s\"}", h)
+			comm.ToOverlay(fmt.Sprintf("tts true %s", h))
+			comm.ToOverlay(fmt.Sprintf("marquee once {\"rawMessage\":\"%s\"}", h))
 		}
 	}
 }

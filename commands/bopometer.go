@@ -10,13 +10,13 @@ import (
 	"time"
 	"sort"
 
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
 // here lies the bopometer...
 type Bopometer struct {
 	Music        *Music
-	TCPChannel   chan string
 	ratings      map[string]trackInfo // key is spotify track id
 	currentTrack trackInfo
 	hasBopped    map[string]bool // usernames
@@ -86,7 +86,7 @@ func (b *Bopometer) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			artists, _ := b.Music.getCurrentTrackArtists()
 			song, _ := b.Music.getCurrentTrackTitle()
 			b.currentTrack = trackInfo{Name: song, Artists: artists, Rating: 1, ID: trackID}
-			b.TCPChannel <- "bop start"
+			comm.ToOverlay("bop start")
 			c := make(chan int)
 			go func(chan int) {
 				client.Say(msg.Channel, fmt.Sprintf("Bopping has %d seconds left! !bop away!", <-c))
@@ -94,7 +94,7 @@ func (b *Bopometer) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			go func(chan int) {
 				bopTimer(c)
 				client.Say(msg.Channel, "Bopping has concluded.")
-				b.TCPChannel <- "bop stop"
+				comm.ToOverlay("bop stop")
 				b.isBopping = false
 			}(c)
 		} else {
@@ -173,7 +173,7 @@ func (b *Bopometer) GetBopping() bool {
 
 func (b *Bopometer) AddBops(n int) {
 	//b.currentTrack.Rating += n
-	b.TCPChannel <- fmt.Sprintf("bop add %d", n)
+	comm.ToOverlay(fmt.Sprintf("bop add %d", n))
 }
 
 func (b *Bopometer) Results(client *twitch.Client, rating string) {

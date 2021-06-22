@@ -10,16 +10,16 @@ import (
 	"time"
 
 	"github.com/gempir/go-twitch-irc/v2"
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/MattSwanson/burtbot/db"
 )
 
 
 type SuggestionBox struct {
 	Suggestions []db.Suggestion
-	TcpChannel chan string
 }
 
-func NewSuggestionBox(tcpChannel chan string) *SuggestionBox {
+func NewSuggestionBox() *SuggestionBox {
 	suggestions := []db.Suggestion{}
 	j, err := os.ReadFile("./suggestions.json")
 	if err != nil {
@@ -31,7 +31,6 @@ func NewSuggestionBox(tcpChannel chan string) *SuggestionBox {
 	}
 	return &SuggestionBox{
 		Suggestions: suggestions,
-		TcpChannel: tcpChannel,
 	}
 }
 
@@ -87,7 +86,7 @@ func (sb *SuggestionBox) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 
 	if args[1] == "all" {
 		for _, suggestion := range sb.Suggestions {
-			sb.TcpChannel <- fmt.Sprintf("tts %s suggested that we %s", suggestion.Username, suggestion.Text)		
+			comm.ToOverlay(fmt.Sprintf("tts %s suggested that we %s", suggestion.Username, suggestion.Text))
 		}
 	}
 }

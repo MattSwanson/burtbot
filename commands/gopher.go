@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
-type Gopher struct {
-	TcpChannel chan string
-}
+type Gopher struct {}
 
 func (g *Gopher) Init() {
 
@@ -29,28 +28,11 @@ func (g *Gopher) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			n = args[2]
 		}
 		fmt.Println("spawn a goph")
-		g.TcpChannel <- "spawngo " + n
+		comm.ToOverlay("spawngo " + n)
 		return
 	}
-	// if args[1] == "hide" {
-	// 	fmt.Println("hide goph")
-	// 	g.TcpChannel <- "hidego"
-	// 	return
-	// }
-	// if args[1] == "show" {
-	// 	fmt.Println("show goph")
-	// 	g.TcpChannel <- "showgo"
-	// 	return
-	// }
-	// if args[1] == "size" {
-	// 	if len(args) < 3 {
-	// 		return
-	// 	}
-	// 	g.TcpChannel <- "sizego " + args[2]
-	// 	return
-	// }
 	if args[1] == "kill" {
-		g.TcpChannel <- "killgophs"
+		comm.ToOverlay("killgophs")
 		return
 	}
 
