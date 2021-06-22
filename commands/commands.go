@@ -107,20 +107,13 @@ func (handler *CmdHandler) LoadAliases() {
 	if err != nil {
 		log.Println("invalid json in aliases file")
 	}
-	for alias, commandName := range handler.aliases {
-		if err := handler.RegisterAlias(alias, commandName); err != nil {
-			log.Println("couldn't register alias from file")
-		}
-	}
 }
 
 func (handler *CmdHandler) RegisterAlias(alias, commandName string) error {
-	// check to see if the command exists in the commands map
-	cmd, ok := handler.Commands[commandName]
-	if !ok { 
-		return errors.New("command doesn't exist, can not assign alias")
+	fmt.Println(commandName)
+	if _, ok := handler.aliases[alias]; ok {
+		return errors.New("alias already exists")
 	}
-	handler.Commands[alias] = cmd
 	handler.aliases[alias] = commandName
 	handler.saveAliasesToFile()
 	return nil
@@ -143,4 +136,15 @@ func (handler *CmdHandler) saveAliasesToFile() {
 	if err := os.WriteFile(aliasesFileName, json, 0644); err != nil {
 		log.Println(err.Error())
 	}
+}
+func (handler *CmdHandler) InjectAliases(message string) string {
+	// check to see if the command entered is an alias
+	fields := strings.Fields(strings.TrimPrefix(message, "!"))
+	command, ok := handler.aliases[fields[0]] 
+	if !ok {
+		return message
+	}
+	// if so replace the alias with the command it represents
+	fields[0] = "!" + command
+	return strings.Join(fields, " ")
 }
