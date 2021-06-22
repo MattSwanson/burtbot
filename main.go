@@ -20,6 +20,7 @@ var handler *commands.CmdHandler
 var client *twitch.Client
 var bbset commands.Bbset
 var chatMessages []twitch.PrivateMessage
+var triviaManager *commands.Trivia
 
 var lastMessage string
 var lastMsg twitch.PrivateMessage
@@ -79,7 +80,10 @@ func main() {
 	jokes := commands.Joke{TcpChannel: commChannel}
 	jokes.Init()
 	handler.RegisterCommand("joke", &jokes)
-	handler.RegisterCommand("lights", &commands.Lights{})
+	
+	lights := commands.NewLights(commChannel)
+	handler.RegisterCommand("lights", lights)
+
 	handler.RegisterCommand("time", &commands.Tim{})
 	sb := commands.NewSuggestionBox(commChannel)
 	//sb.Init()
@@ -111,6 +115,7 @@ func main() {
 	handler.RegisterCommand("marquee", &marquee)
 
 	handler.RegisterCommand("so", &commands.Shoutout{TcpChannel: commChannel, TwitchClient: &twitchAuthClient})
+	handler.RegisterCommand("error", &commands.ErrorBox{TcpChannel: commChannel})
 
 	plinko := commands.Plinko{TcpChannel: commChannel, TokenMachine: &tokenMachine}
 	handler.RegisterCommand("plinko", &plinko)
@@ -121,6 +126,10 @@ func main() {
 	lightsOut := commands.LightsOut{CommChannel: commChannel}
 	handler.RegisterCommand("lo", &lightsOut)
 
+	triviaManager = commands.NewTrivia()
+	handler.RegisterCommand("trivia", triviaManager)
+
+	handler.RegisterCommand("wod", &commands.Wod{})
 	handler.RegisterCommand("protocolr", &commands.ProtoR{})
 	handler.RegisterCommand("incomplete", &commands.Incomplete{})
 	bingo := commands.NewBingo(&twitchAuthClient, &tokenMachine, commChannel)
@@ -140,7 +149,7 @@ func main() {
 func handleMessage(msg twitch.PrivateMessage) {
 
 	showMessageOnConsole(msg)
-	
+		
 	if msg.User.DisplayName == "tundragaminglive" {
 		commChannel <- "miracle"
 	}
@@ -148,15 +157,24 @@ func handleMessage(msg twitch.PrivateMessage) {
 	if lower == "!help" {
 		handler.HelpAll()
 	}
+	go func(){
+		if triviaManager.AnswerChannel != nil {
+			triviaManager.AnswerChannel <- msg
+		}
+	}()
+	msg.Message = handler.InjectAliases(msg.Message)
 
 	fields := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
-	if commands.IsMod(msg.User) && fields[0] == "alias" && len(fields) == 4 {
+	if commands.IsMod(msg.User) && fields[0] == "alias" && len(fields) >= 4 {
 		// !alias add alias command
 		if fields[1] == "add" {
-			err := handler.RegisterAlias(fields[2], fields[3])			
+			originalCommand := strings.Join(fields[3:], " ")
+			err := handler.RegisterAlias(fields[2], originalCommand)			
 			if err != nil {
-				client.Say(msg.Channel, fmt.Sprintf("Can not create alias, command %s doesn't exist. Apparently.", fields[3]))
+				client.Say(msg.Channel, fmt.Sprintf("The alias [%s] already exists.", fields[2]))
+				return
 			}
+			client.Say(msg.Channel, fmt.Sprintf("Created alias [%s] for [%s]", fields[2], originalCommand)) 
 			return
 		}
 	}
