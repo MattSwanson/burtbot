@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"sort"
 
 	"github.com/gempir/go-twitch-irc/v2"
 )
@@ -27,6 +28,13 @@ type trackInfo struct {
 	Name    string
 	Artists []string
 	Rating  float32
+}
+
+type tracks []trackInfo
+func (t tracks) Len() int { return len(t) }
+func (t tracks) Less(i, j int) bool { return t[i].Rating > t[j].Rating }
+func (t tracks) Swap(i, j int) {
+	t[i], t[j] = t[j], t[i]
 }
 
 const (
@@ -99,6 +107,29 @@ func (b *Bopometer) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			// }
 		}
 		return
+	}
+	if len(args) == 2 && args[1] == "top" {
+		// get top bops
+		ts := tracks{}
+		for _, track := range b.ratings {
+			ts = append(ts, track)
+		}
+		sort.Sort(ts)
+		client.Say(msg.Channel, "Top 3 BOPs:")
+		for i := 0; i < 3; i++ {
+			if i > len(ts) - 1 {
+				client.Say(msg.Channel, fmt.Sprintf("%d: ???", i+1))
+				continue
+			}
+			artists := ""
+			for k, a := range ts[i].Artists {
+				artists += a
+				if k < len(artists) - 1 {
+					artists += ", "
+				}
+			}
+			client.Say(msg.Channel, fmt.Sprintf("%d: %s by %s with a %.2f rating.", i+1, ts[i].Name, artists, ts[i].Rating))
+		}
 	}
 }
 
