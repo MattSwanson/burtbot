@@ -146,7 +146,7 @@ func (j *Joke) JokeMode(client *twitch.Client, msg twitch.PrivateMessage) {
 func (j *Joke) Help() []string {
 	return []string{
 		"!joke to hear one joke.",
-		"!joke mode on|off to enable or disable joke mode",
+		"!joke mode start|stop to enable or disable joke mode",
 		"!joke overload - don't do this. please.",
 	}
 }
