@@ -6,6 +6,7 @@ import (
 	"html/template"
 
 	"github.com/MattSwanson/burtbot/commands"
+	"github.com/MattSwanson/burtbot/helix"
 )
 
 var cmdHandler *commands.CmdHandler
@@ -20,9 +21,9 @@ func StartWebServer(ch *commands.CmdHandler) {
 
 	cmdHandler = ch
 	// Add handlers for http stuffs
-	http.HandleFunc("/twitch_authcb", commands.TwitchAuthCb)
-	http.HandleFunc("/twitch_link", commands.GetAuthLink)
-	http.HandleFunc("/eventsub_cb", commands.EventSubCallback)
+	http.HandleFunc("/twitch_authcb", helix.TwitchAuthCb)
+	http.HandleFunc("/twitch_link", helix.GetAuthLink)
+	http.HandleFunc("/eventsub_cb", helix.EventSubCallback)
 	http.HandleFunc("/commands", commandList)
 	http.HandleFunc("/bingo", commands.DisplayCards)
 	http.HandleFunc("/", home)

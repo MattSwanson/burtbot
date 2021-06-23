@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/MattSwanson/burtbot/comm"
+	"github.com/MattSwanson/burtbot/helix"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
 type Shoutout struct {
-	TwitchClient *TwitchAuthClient
 	//customMessages map[string]string // key is username, value is a message to display
 }
 
@@ -23,7 +23,7 @@ func (s *Shoutout) Run(msg twitch.PrivateMessage) {
 	if !IsMod(msg.User) {
 		return
 	}
-	if !s.TwitchClient.GetAuthStatus() {
+	if !helix.GetAuthStatus() {
 		comm.ToChat(msg.Channel, "I'd shout them out or whatever but I don't have \"ACCESS\" to the info... hint hint.")
 		return
 	}
@@ -31,12 +31,12 @@ func (s *Shoutout) Run(msg twitch.PrivateMessage) {
 	if len(args) < 2 {
 		return
 	}
-	u := s.TwitchClient.GetUser(args[1])
+	u := helix.GetUser(args[1])
 	if u.UserID == "" {
 		comm.ToChat(msg.Channel, "Sorry, I don't shout out non-existant users. Not for free at least.")
 		return
 	}
-	ci := s.TwitchClient.GetChannelInfo(u.UserID)
+	ci := helix.GetChannelInfo(u.UserID)
 	var game string
 	if ci.GameName == "" {
 		game = "<REDACTED>"

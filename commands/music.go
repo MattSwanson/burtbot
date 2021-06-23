@@ -33,7 +33,7 @@ func (m *Music) Init() {
 		http.HandleFunc("/spotify_link", getSpotifyLink)
 		go http.ListenAndServeTLS(":8079", "/etc/letsencrypt/live/burtbot.app/fullchain.pem", "/etc/letsencrypt/live/burtbot.app/privkey.pem", nil)
 
-		m.TokenMachine = getTokenMachine()
+		m.TokenMachine = GetTokenMachine()
 		fmt.Println("Awating Spotify authentication...")
 		m.SpotifyClient = <-spotifyAuthCh
 		fmt.Println("Logged in to Spotify")

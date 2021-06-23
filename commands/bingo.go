@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/MattSwanson/burtbot/comm"
+	"github.com/MattSwanson/burtbot/helix"
 	"github.com/gempir/go-twitch-irc/v2"
 	"github.com/google/btree"
 )
@@ -33,13 +34,12 @@ type Bingo struct {
 	drawnNumbers	 *btree.BTree
 	players          map[string]player
 	running          bool
-	twitchAuthClient *TwitchAuthClient
 	drawCancelFunc   context.CancelFunc
 	tokenMachine	 *TokenMachine
 }
 
 type player struct {
-	user       TwitchUser
+	user       helix.TwitchUser
 	card       []int
 	markedCard []int
 	url        string
@@ -114,13 +114,12 @@ func (b *Bingo) Run(msg twitch.PrivateMessage) {
 
 }
 
-func NewBingo(tac *TwitchAuthClient, tokenMachine *TokenMachine) *Bingo {
+func NewBingo(tokenMachine *TokenMachine) *Bingo {
 	b := Bingo{
 		hopper:           []ball{1, 2, 3},
 		drawnNumbers:     btree.New(2),
 		players:          make(map[string]player),
 		running:          false,
-		twitchAuthClient: tac,
 		tokenMachine: tokenMachine,
 	}
 	currentGame = &b
@@ -227,7 +226,7 @@ func (b *Bingo) shuffleHopper() {
 
 func (b *Bingo) userJoined(username string) (string, error) {
 	// get twitch user info
-	user := b.twitchAuthClient.GetUser(username)
+	user := helix.GetUser(username)
 	if user.UserID == "" {
 		return "", errors.New("couldn't get user info from twitch")
 	}

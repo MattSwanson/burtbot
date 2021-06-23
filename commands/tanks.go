@@ -6,11 +6,11 @@ import (
 	"strings"
 
 	"github.com/MattSwanson/burtbot/comm"
+	"github.com/MattSwanson/burtbot/helix"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
 type Tanks struct {
-	TwitchClient *TwitchAuthClient
 	running      bool
 	//currentPlayers []twitch.User
 }
@@ -31,7 +31,7 @@ func (t *Tanks) Run(msg twitch.PrivateMessage) {
 		comm.ToOverlay("tanks stop")
 		t.running = false
 	} else if args[1] == "join" && t.running {
-		u := t.TwitchClient.GetUser(msg.User.Name)
+		u := helix.GetUser(msg.User.Name)
 		comm.ToOverlay(fmt.Sprintf("tanks join %s %s", msg.User.DisplayName, u.ProfileImgURL))
 	} else if args[1] == "reset" && t.running && IsMod(msg.User) {
 		comm.ToOverlay("tanks reset")

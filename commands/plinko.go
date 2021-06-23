@@ -22,7 +22,7 @@ func (p *Plinko) Init() {
 
 func (p *Plinko) Run(msg twitch.PrivateMessage) {
 	if p.TokenMachine == nil {
-		p.TokenMachine = getTokenMachine()
+		p.TokenMachine = GetTokenMachine()
 	}
 	args := strings.Fields(strings.ToLower(msg.Message))
 	if len(args) < 2 {

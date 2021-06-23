@@ -9,6 +9,7 @@ import (
 	"github.com/MattSwanson/burtbot/db"
 	"github.com/MattSwanson/burtbot/commands"
 	"github.com/MattSwanson/burtbot/comm"
+	"github.com/MattSwanson/burtbot/helix"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
@@ -47,6 +48,7 @@ func main() {
 		fmt.Println("burtbot circuits activated")
 	})
 
+	helix.Init()
 
 	registerCommands()
 	client.Join("burtstanton")
@@ -67,9 +69,6 @@ func registerCommands() {
 
 	tokenMachine := commands.TokenMachine{BurtCoin: &burtCoin}
 	handler.RegisterCommand("tokenmachine", &tokenMachine)
-
-	twitchAuthClient := commands.TwitchAuthClient{}
-	twitchAuthClient.Init()
 
 	//handler.RegisterCommand("nonillion", commands.Nonillion{})
 	handler.RegisterCommand("ded", &commands.Ded{})
@@ -109,7 +108,7 @@ func registerCommands() {
 	handler.RegisterCommand("wod", &commands.Wod{})
 	handler.RegisterCommand("protocolr", &commands.ProtoR{})
 	handler.RegisterCommand("incomplete", &commands.Incomplete{})
-	bingo := commands.NewBingo(&twitchAuthClient, &tokenMachine)
+	bingo := commands.NewBingo(&tokenMachine)
 	handler.RegisterCommand("bingo", bingo)
 	handler.LoadAliases()
 }

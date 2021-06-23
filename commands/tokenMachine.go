@@ -11,8 +11,11 @@ import (
 	"time"
 
 	"github.com/MattSwanson/burtbot/comm"
+	"github.com/MattSwanson/burtbot/helix"
 	"github.com/gempir/go-twitch-irc/v2"
 )
+
+const followRewardAmount = 100
 
 var tm *TokenMachine
 
@@ -35,7 +38,7 @@ const (
 	distractCooldown       = 24 // hours
 )
 
-func getTokenMachine() *TokenMachine {
+func GetTokenMachine() *TokenMachine {
 	return tm
 }
 
@@ -55,6 +58,9 @@ func (t *TokenMachine) Init() {
 			t.persist = false
 		}
 	}
+
+	helix.SubscribeToFollowEvent(t.FollowReward)
+
 	tm = t
 }
 
@@ -244,6 +250,12 @@ func (t *TokenMachine) getTokenCount(user twitch.User) int {
 	username := strings.ToLower(user.Name)
 	// No one gets any tokens!!!!
 	return t.Tokens[username]
+}
+
+func (t *TokenMachine) FollowReward(username string) {
+	s := fmt.Sprintf("Thanks for following @%s! Have %d tokens to spend on useless things...", username, followRewardAmount)
+	comm.ToChat("burtstanton", s)
+	t.GrantToken(username, followRewardAmount)
 }
 
 func (t *TokenMachine) Help() []string {

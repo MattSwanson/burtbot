@@ -1,4 +1,4 @@
-package commands
+package helix
 
 import (
 	"bytes"
@@ -15,8 +15,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"github.com/MattSwanson/burtbot/comm"
 )
 
 var twitchAuthCh chan bool
@@ -24,7 +22,7 @@ var twitchAuth bool
 var twitchAccessToken string
 var twitchAppAccessToken string
 var twitchRefreshToken string
-var tokenMachine *TokenMachine
+var followEventSubscriptions []func(string)
 
 type twitchAuthResp struct {
 	Access_token  string
@@ -66,25 +64,16 @@ type EventSubscription struct {
 	}
 }
 
-type TwitchAuthClient struct {}
-
-func (c *TwitchAuthClient) Init() {
+func Init() {
 	go func() {
 		twitchAuthCh = make(chan bool)
-		/* http.HandleFunc("/twitch_authcb", twitchAuthCb)
-		http.HandleFunc("/twitch_link", getAuthLink)
-		http.HandleFunc("/eventsub_cb", eventSubCallback)
-		http.HandleFunc("/", home)
-		*/
-		tokenMachine = getTokenMachine()
 		
-		// go http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/burtbot.app/fullchain.pem", "/etc/letsencrypt/live/burtbot.app/privkey.pem", nil)
 		twitchAuth = <-twitchAuthCh
 		fmt.Println("Auth'd for twitch api")
-		twitchAppAccessToken = c.GetAppAccessToken()
+		twitchAppAccessToken = getAppAccessToken()
 
 		// Get active eventsubs cancel them since they likely have an out of date callback url
-		eventSubs := c.GetSubscriptions()
+		eventSubs := getSubscriptions()
 		var alreadySubbed bool
 		for _, es := range eventSubs {
 			if es.Transport.Callback == os.Getenv("TWITCH_CALLBACK_URL") {
@@ -92,10 +81,10 @@ func (c *TwitchAuthClient) Init() {
 				fmt.Println("Eventsub already active. Move along.")
 				continue
 			}
-			c.DeleteSubscription(es.ID)
+			deleteSubscription(es.ID)
 		}
 		if !alreadySubbed {
-			c.Subscribe("channel.follow")
+			subscribe("channel.follow")
 		}
 	}()
 }
@@ -158,7 +147,7 @@ func GetAuthLink(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>TwiAuth</title></head><body>Auth URL: <a href="%s">here</a></body></html>`, buf.String())
 }
 
-func (c *TwitchAuthClient) RefreshAuth() {
+func refreshAuth() {
 	u := "https://id.twitch.tv/oauth2/token"
 	v := url.Values{
 		"grant_type":    {"refresh_token"},
@@ -182,7 +171,7 @@ func (c *TwitchAuthClient) RefreshAuth() {
 	twitchAccessToken = r.Access_token
 }
 
-func (c *TwitchAuthClient) GetUser(username string) TwitchUser {
+func GetUser(username string) TwitchUser {
 	u := fmt.Sprintf("https://api.twitch.tv/helix/users?login=%s", username)
 	req, err := http.NewRequest("GET", u, strings.NewReader(""))
 	if err != nil {
@@ -216,7 +205,7 @@ func (c *TwitchAuthClient) GetUser(username string) TwitchUser {
 	return rdata.Data[0]
 }
 
-func (c *TwitchAuthClient) GetChannelInfo(broadcaster_id string) ChannelInfo {
+func GetChannelInfo(broadcaster_id string) ChannelInfo {
 	u := fmt.Sprintf("https://api.twitch.tv/helix/channels?broadcaster_id=%s", broadcaster_id)
 	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
@@ -251,7 +240,7 @@ func (c *TwitchAuthClient) GetChannelInfo(broadcaster_id string) ChannelInfo {
 	return respStruct.Data[0]
 }
 
-func (c *TwitchAuthClient) Subscribe(event string) {
+func subscribe(event string) {
 	u := "https://api.twitch.tv/helix/eventsub/subscriptions"
 	cond := struct {
 		BroadCasterUserID string `json:"broadcaster_user_id"`
@@ -359,10 +348,10 @@ func EventSubCallback(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, respStruct.Challenge)
 	case "notification":
 		if r.Header.Get("Twitch-Eventsub-Subscription-Type") == "channel.follow" && respStruct.Event.BroadcasterUserID == "38570305" {
-			const n = 100
-			s := fmt.Sprintf("Thanks for following @%s! Have %d tokens to spend on useless things...", respStruct.Event.UserName, n)
-			comm.ToChat("burtstanton", s)
-			tokenMachine.GrantToken(respStruct.Event.UserName, n)
+			// notify subscribers of the follow event providing the username
+			for _, f := range followEventSubscriptions {
+				f(respStruct.Event.UserName)
+			}
 		}
 		w.WriteHeader(200)
 	}
@@ -383,7 +372,7 @@ func validSignature(headers http.Header, bodyBytes []byte) bool {
 	return hmac.Equal(exMAC, sentMAC)
 }
 
-func (c *TwitchAuthClient) GetAppAccessToken() string {
+func getAppAccessToken() string {
 	u := "https://id.twitch.tv/oauth2/token"
 	v := url.Values{
 		"grant_type":    {"client_credentials"},
@@ -409,7 +398,7 @@ func (c *TwitchAuthClient) GetAppAccessToken() string {
 	return respStruct.AccessToken
 }
 
-func (c *TwitchAuthClient) DeleteSubscription(id string) {
+func deleteSubscription(id string) {
 	u := fmt.Sprintf("https://api.twitch.tv/helix/eventsub/subscriptions?id=%s", id)
 	req, err := http.NewRequest("DELETE", u, strings.NewReader(""))
 	if err != nil {
@@ -427,7 +416,7 @@ func (c *TwitchAuthClient) DeleteSubscription(id string) {
 	fmt.Println("Cancel sub req status: ", resp.StatusCode)
 }
 
-func (client *TwitchAuthClient) GetSubscriptions() []EventSubscription {
+func getSubscriptions() []EventSubscription {
 	subData := struct {
 		Data         []EventSubscription
 		Total        int
@@ -464,6 +453,10 @@ func (client *TwitchAuthClient) GetSubscriptions() []EventSubscription {
 	return subData.Data
 }
 
-func (client *TwitchAuthClient) GetAuthStatus() bool {
+func GetAuthStatus() bool {
 	return twitchAuth
+}
+
+func SubscribeToFollowEvent(fn func(string)) {
+	followEventSubscriptions = append(followEventSubscriptions, fn)	
 }
