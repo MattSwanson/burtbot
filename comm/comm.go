@@ -18,6 +18,10 @@ func init() {
 	readChannel = make(chan string)
 }
 
+func GetReadChannel() chan string {
+	return readChannel
+}
+
 func ToOverlay(s string) {
 	writeChannel <- s
 }

@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/MattSwanson/burtbot/comm"
@@ -27,7 +26,6 @@ func (g *Gopher) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		if len(args) >= 3 {
 			n = args[2]
 		}
-		fmt.Println("spawn a goph")
 		comm.ToOverlay("spawngo " + n)
 		return
 	}

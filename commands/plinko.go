@@ -3,6 +3,8 @@ package commands
 import (
 	"fmt"
 	"strings"
+	"strconv"
+	"encoding/json"
 
 	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
@@ -41,6 +43,33 @@ func (p *Plinko) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 
 func (p *Plinko) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 	// lame
+}
+
+func (p *Plinko) HandleResponse(args []string) {
+	if n, err := strconv.Atoi(args[3]); err == nil {
+		p.TokenMachine.GrantToken(strings.ToLower(args[2]), n)
+
+		s := ""
+		if n > 0 {
+			plural := ""
+			if n > 1 {
+				plural = "s"
+			}
+			s = fmt.Sprintf("@%s won %d token%s!", args[2], n, plural)
+		} else {
+			s = fmt.Sprintf("@%s, YOU GET NOTHING! GOOD DAY!", args[2])
+		}
+		//client.Say("burtstanton", s)
+		mMsg := MarqueeMsg{
+			RawMessage: s,
+			Emotes:     "",
+		}
+		json, err := json.Marshal(mMsg)
+		if err != nil {
+			return
+		}
+		comm.ToOverlay("marquee once " + string(json))
+	}
 }
 
 func (p *Plinko) Stop() {

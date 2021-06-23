@@ -5,12 +5,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
-type LightsOut struct {
-	CommChannel chan string
-}
+type LightsOut struct {}
 
 func (l *LightsOut) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
@@ -18,11 +17,11 @@ func (l *LightsOut) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		return
 	}
 	if args[1] == "start" || args[1] == "stop" || args[1] == "reset" {
-		l.CommChannel <- fmt.Sprintf("lo %s", args[1])
+		comm.ToOverlay(fmt.Sprintf("lo %s", args[1]))
 		return
 	}
 	if n, err := strconv.Atoi(args[1]); err == nil {
-		l.CommChannel <- fmt.Sprintf("lo %d", n)
+		comm.ToOverlay(fmt.Sprintf("lo %d", n))
 	}
 }
 

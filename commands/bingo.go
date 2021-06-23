@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 	"github.com/google/btree"
 )
@@ -34,7 +35,6 @@ type Bingo struct {
 	running          bool
 	twitchAuthClient *TwitchAuthClient
 	drawCancelFunc   context.CancelFunc
-	tcpChannel		 chan string
 	tokenMachine	 *TokenMachine
 }
 
@@ -64,7 +64,7 @@ func (b *Bingo) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 				// winrar
 				numTokens := cardCost * len(b.players)
 				client.Say(msg.Channel, fmt.Sprintf("@%s has Bingo! They win %d tokens!", msg.User.DisplayName, numTokens))
-				b.tcpChannel <- fmt.Sprintf("bingo winner %s %d", msg.User.DisplayName, numTokens)
+				comm.ToOverlay(fmt.Sprintf("bingo winner %s %d", msg.User.DisplayName, numTokens))
 				// alot tokens to winrar
 				b.tokenMachine.GrantToken(msg.User.DisplayName, numTokens)
 				b.drawCancelFunc()
@@ -109,19 +109,18 @@ func (b *Bingo) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		client.Say(msg.Channel, "Deactivating Bingo circuits.")
 		b.running = false
 		b.drawCancelFunc()
-		b.tcpChannel <- "bingo reset"
+		comm.ToOverlay("bingo reset")
 	}
 
 }
 
-func NewBingo(tac *TwitchAuthClient, tokenMachine *TokenMachine, tcpChannel chan string) *Bingo {
+func NewBingo(tac *TwitchAuthClient, tokenMachine *TokenMachine) *Bingo {
 	b := Bingo{
 		hopper:           []ball{1, 2, 3},
 		drawnNumbers:     btree.New(2),
 		players:          make(map[string]player),
 		running:          false,
 		twitchAuthClient: tac,
-		tcpChannel: tcpChannel,
 		tokenMachine: tokenMachine,
 	}
 	currentGame = &b
@@ -141,7 +140,7 @@ func (b *Bingo) Start(client *twitch.Client, channelName string) {
 		if b.drawCancelFunc != nil {
 			b.drawCancelFunc()
 		}
-		b.tcpChannel <- "bingo reset"
+		comm.ToOverlay("bingo reset")
 		rand.Seed(time.Now().UnixNano())
 		b.players = map[string]player{}
 		b.fillHopper()
@@ -189,7 +188,7 @@ func (b *Bingo) Start(client *twitch.Client, channelName string) {
 						default:
 							letter = "O"
 					}
-					b.tcpChannel <- fmt.Sprintf("bingo drawn %s%d", letter, drawn)
+					comm.ToOverlay(fmt.Sprintf("bingo drawn %s%d", letter, drawn))
 				}
 			}
 		}(ctx, channelName)

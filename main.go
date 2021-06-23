@@ -1,11 +1,9 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 	"github.com/MattSwanson/burtbot/db"
@@ -26,15 +24,13 @@ var lastMsg twitch.PrivateMessage
 var schlorpLock = false
 var schlorpCD = 10
 
-var commChannel chan string
 var readChannel chan string
 
 var bopometer *commands.Bopometer
 
 func main() {
 
-	commChannel = make(chan string)
-	readChannel = make(chan string)
+	readChannel = comm.GetReadChannel()
 	go comm.ConnectToOverlay()
 
 	// init db connection
@@ -53,7 +49,18 @@ func main() {
 	client.OnConnect(func() {
 		fmt.Println("burtbot circuits activated")
 	})
+	
+	registerCommands()
+	client.Join("burtstanton")
+	StartWebServer(handler)
+	
+	err = client.Connect()
+	if err != nil {
+		panic(err)
+	}
+}
 
+func registerCommands() {
 	handler = commands.NewCmdHandler(client)
 
 	burtCoin := commands.BurtCoin{}
@@ -67,8 +74,6 @@ func main() {
 	twitchAuthClient := commands.TwitchAuthClient{}
 	go twitchAuthClient.Init(client, &tokenMachine)
 
-	client.Join("burtstanton")
-
 	//handler.RegisterCommand("nonillion", commands.Nonillion{})
 	handler.RegisterCommand("ded", &commands.Ded{})
 	handler.RegisterCommand("oven", &commands.Oven{Temperature: 65, BakeTemp: 0})
@@ -80,7 +85,6 @@ func main() {
 	handler.RegisterCommand("joke", &jokes)
 	
 	handler.RegisterCommand("lights", commands.NewLights())
-
 	handler.RegisterCommand("time", &commands.Tim{})
 	handler.RegisterCommand("sb", commands.NewSuggestionBox())
 
@@ -111,9 +115,7 @@ func main() {
 
 	tanks := commands.Tanks{}
 	handler.RegisterCommand("tanks", &tanks)
-
-	lightsOut := commands.LightsOut{CommChannel: commChannel}
-	handler.RegisterCommand("lo", &lightsOut)
+	handler.RegisterCommand("lo", &commands.LightsOut{})
 
 	triviaManager = commands.NewTrivia()
 	handler.RegisterCommand("trivia", triviaManager)
@@ -121,18 +123,13 @@ func main() {
 	handler.RegisterCommand("wod", &commands.Wod{})
 	handler.RegisterCommand("protocolr", &commands.ProtoR{})
 	handler.RegisterCommand("incomplete", &commands.Incomplete{})
-	bingo := commands.NewBingo(&twitchAuthClient, &tokenMachine, commChannel)
+	bingo := commands.NewBingo(&twitchAuthClient, &tokenMachine)
 	handler.RegisterCommand("bingo", bingo)
 	//importSuggestions(&twitchAuthClient, sb.Suggestions)
 
 	handler.LoadAliases()
 	go handleResults(&plinko, &tokenMachine, &snake, &tanks, &bop)
-	StartWebServer(handler)
-	
-	err = client.Connect()
-	if err != nil {
-		panic(err)
-	}
+
 }
 
 func handleMessage(msg twitch.PrivateMessage) {
@@ -140,7 +137,7 @@ func handleMessage(msg twitch.PrivateMessage) {
 	showMessageOnConsole(msg)
 		
 	if msg.User.DisplayName == "tundragaminglive" {
-		commChannel <- "miracle"
+		comm.ToOverlay("miracle")
 	}
 	lower := strings.ToLower(msg.Message)
 	if lower == "!help" {
@@ -208,9 +205,6 @@ func handleMessage(msg twitch.PrivateMessage) {
 	if strings.Contains(lower, "one time") {
 		client.Say(msg.Channel, "ONE TIME!")
 	}
-	// if strings.Contains(lower, "quack") {
-	// 	commChannel <- "quack"
-	// }
 	if count := strings.Count(lower, "quack"); count > 0 {
 		comm.ToOverlay(fmt.Sprintf("quack %d", count))
 	}
@@ -243,31 +237,8 @@ func handleResults(
 		switch args[0] {
 		case "plinko":
 			// plinko result username n
-			if n, err := strconv.Atoi(args[3]); err == nil {
-				t.GrantToken(strings.ToLower(args[2]), n)
-
-				s := ""
-				if n > 0 {
-					plural := ""
-					if n > 1 {
-						plural = "s"
-					}
-					s = fmt.Sprintf("@%s won %d token%s!", args[2], n, plural)
-				} else {
-					s = fmt.Sprintf("@%s, YOU GET NOTHING! GOOD DAY!", args[2])
-				}
-				//client.Say("burtstanton", s)
-				mMsg := commands.MarqueeMsg{
-					RawMessage: s,
-					Emotes:     "",
-				}
-				json, err := json.Marshal(mMsg)
-				if err != nil {
-					return
-				}
-				commChannel <- "marquee once " + string(json)
-			}
 			//p.Stop
+			p.HandleResponse(args)
 		case "bop":
 			b.Results(client, args[2])
 		case "reset":
@@ -282,5 +253,4 @@ func handleResults(
 func unlockSchlorp() {
 	time.Sleep(time.Second * time.Duration(schlorpCD))
 	schlorpLock = false
-	log.Println("schlorp unlocked")
 }
