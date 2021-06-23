@@ -47,7 +47,7 @@ type player struct {
 
 type ball int
 
-func (b *Bingo) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (b *Bingo) Run(msg twitch.PrivateMessage) {
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
 	if len(args) == 1 {
 		if !b.running {
@@ -69,7 +69,7 @@ func (b *Bingo) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 				b.tokenMachine.GrantToken(msg.User.DisplayName, numTokens)
 				b.drawCancelFunc()
 				b.running = false
-				b.Start(client, msg.Channel)
+				b.Start(msg.Channel)
 				return
 			}
 			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, it would appear you don't have bingo.", msg.User.DisplayName))
@@ -78,7 +78,7 @@ func (b *Bingo) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	}
 	// !bingo start
 	if args[1] == "start" && IsMod(msg.User) {
-		b.Start(client, msg.Channel)
+		b.Start(msg.Channel)
 		return
 	}
 
@@ -131,11 +131,7 @@ func (b *Bingo) Init() {
 
 }
 
-func (b *Bingo) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-
-}
-
-func (b *Bingo) Start(client *twitch.Client, channelName string) {
+func (b *Bingo) Start(channelName string) {
 		b.running = true
 		if b.drawCancelFunc != nil {
 			b.drawCancelFunc()
@@ -164,7 +160,7 @@ func (b *Bingo) Start(client *twitch.Client, channelName string) {
 					if len(b.hopper) <= 0 {
 						comm.ToChat(chatChannel, "There are no balls left... is anyone even paying attention?")
 						comm.ToChat(chatChannel, "Looks like no one won bingo... starting another game soon")
-						b.Start(client, chatChannel)
+						b.Start(chatChannel)
 						return
 					}
 					drawn := b.drawBall()

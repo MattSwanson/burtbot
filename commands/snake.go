@@ -17,7 +17,7 @@ func (s *Snake) Init() {
 	comm.SubscribeToReply("reset", s.Stop)
 }
 
-func (s *Snake) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (s *Snake) Run(msg twitch.PrivateMessage) {
 	args := strings.Fields(strings.ToLower(msg.Message))
 	if len(args) < 2 || args[1] == "start" {
 		if !s.isRunning {
@@ -46,10 +46,6 @@ func (s *Snake) SetRunning(b bool) {
 
 func (s *Snake) Stop(args []string) {
 	s.isRunning = false
-}
-
-func (s *Snake) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-
 }
 
 func (s *Snake) Help() []string {

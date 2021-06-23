@@ -19,7 +19,7 @@ func (s *Shoutout) Init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func (s *Shoutout) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (s *Shoutout) Run(msg twitch.PrivateMessage) {
 	if !IsMod(msg.User) {
 		return
 	}
@@ -58,10 +58,6 @@ func (s *Shoutout) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		comm.ToChat(msg.Channel, fmt.Sprintf("CHECK OUT %s ON AT http://twitch.tv/%[1]s", u.DisplayName))
 		comm.ToChat(msg.Channel, fmt.Sprintf("THEY WERE LAST SEEN STREAMING %s. WHATEVER THAT IS.", game))
 	}
-}
-
-func (s *Shoutout) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-
 }
 
 func (s *Shoutout) Help() []string {

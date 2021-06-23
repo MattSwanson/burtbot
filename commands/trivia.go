@@ -71,7 +71,7 @@ func NewTrivia() *Trivia {
 	}
 }
 
-func (t *Trivia) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (t *Trivia) Run(msg twitch.PrivateMessage) {
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
 	if len(args) < 2 {
 		return
@@ -107,7 +107,7 @@ func (t *Trivia) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		// start the game
 		var ctx context.Context
 		ctx, triviaCancel = context.WithCancel(context.Background())
-		go t.run(ctx, client, msg.Channel)	
+		go t.run(ctx, msg.Channel)	
 	}
 	
 	// stop
@@ -120,10 +120,6 @@ func (t *Trivia) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 }
 
 func (t *Trivia) Init() {
-
-}
-
-func (t *Trivia) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 
 }
 
@@ -156,7 +152,7 @@ func (t *Trivia) getQuestions(category int) error {
 	return nil
 }
 
-func (t *Trivia) run(ctx context.Context, client *twitch.Client, channel string) {
+func (t *Trivia) run(ctx context.Context, channel string) {
 	// ask a question
 	comm.ToChat(channel, t.questions[t.roundNumber].Text)
 	// wait for answer
@@ -197,7 +193,7 @@ func (t *Trivia) run(ctx context.Context, client *twitch.Client, channel string)
 	}
 	// goto start
 	// ctx, cancel := context.WithCancel(context.Background())
-	t.run(ctx, client, channel)
+	t.run(ctx, channel)
 }
 
 func (t *Trivia) Reset() {

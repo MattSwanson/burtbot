@@ -11,12 +11,8 @@ func (e ErrorBox) Init() {
 
 }
 
-func (e *ErrorBox) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (e *ErrorBox) Run(msg twitch.PrivateMessage) {
 	comm.ToOverlay("error")
-}
-
-func (e ErrorBox) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-
 }
 
 func (e ErrorBox) Help() []string {

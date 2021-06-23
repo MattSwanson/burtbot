@@ -13,7 +13,7 @@ func (g *Gopher) Init() {
 
 }
 
-func (g *Gopher) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (g *Gopher) Run(msg twitch.PrivateMessage) {
 	//!go spawn
 	//!go show
 	//!go hide
@@ -33,10 +33,6 @@ func (g *Gopher) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		comm.ToOverlay("killgophs")
 		return
 	}
-
-}
-
-func (g *Gopher) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 
 }
 

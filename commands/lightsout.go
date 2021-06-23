@@ -11,7 +11,7 @@ import (
 
 type LightsOut struct {}
 
-func (l *LightsOut) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (l *LightsOut) Run(msg twitch.PrivateMessage) {
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
 	if len(args) < 2 {
 		return
@@ -26,10 +26,6 @@ func (l *LightsOut) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 }
 
 func (l *LightsOut) Init() {
-
-}
-
-func (l *LightsOut) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 
 }
 

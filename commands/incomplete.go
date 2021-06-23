@@ -12,7 +12,7 @@ type Incomplete struct {
 	count int
 }
 
-func (i *Incomplete) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (i *Incomplete) Run(msg twitch.PrivateMessage) {
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
 	if len(args) <= 1 {
 		i.count++
@@ -25,10 +25,6 @@ func (i *Incomplete) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 }
 
 func (i *Incomplete) Init() {
-
-}
-
-func (i Incomplete) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 
 }
 

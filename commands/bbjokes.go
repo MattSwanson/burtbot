@@ -33,7 +33,7 @@ func (j *Joke) Init() {
 	j.jokeMode = false
 }
 
-func (j *Joke) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (j *Joke) Run(msg twitch.PrivateMessage) {
 	if jokeLock && !IsMod(msg.User) {
 		return
 	}
@@ -43,7 +43,7 @@ func (j *Joke) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	}
 	args := strings.Fields(strings.ToLower(strings.TrimPrefix(msg.Message, "!")))
 	if len(args) == 1 {
-		j.TellJoke(client, msg, false)
+		j.TellJoke(msg, false)
 		return
 	}
 
@@ -54,7 +54,7 @@ func (j *Joke) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		// start
 		if args[2] == "start" && !j.jokeMode {
 			comm.ToChat(msg.Channel, "Initiating joke mode - prepare for copious amounts of laughter.")
-			j.JokeMode(client, msg)
+			j.JokeMode(msg)
 		}
 		// stop
 		if args[2] == "stop" && j.jokeMode {
@@ -75,13 +75,9 @@ func (j *Joke) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			canOverload = true
 		}()
 		for i := 0; i < 100; i++ {
-			j.TellJoke(client, msg, true)
+			j.TellJoke(msg, true)
 		}
 	}
-}
-
-func (j *Joke) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-
 }
 
 func unlockJoke() {
@@ -89,7 +85,7 @@ func unlockJoke() {
 	jokeLock = false
 }
 
-func (j *Joke) TellJoke(client *twitch.Client, msg twitch.PrivateMessage, voiceOnly bool) {
+func (j *Joke) TellJoke(msg twitch.PrivateMessage, voiceOnly bool) {
 	// Fetch a joke from icanhazdadjoke api
 	req, err := http.NewRequest("GET", "https://icanhazdadjoke.com", nil)
 	if err != nil {
@@ -127,7 +123,7 @@ func (j *Joke) TellJoke(client *twitch.Client, msg twitch.PrivateMessage, voiceO
 
 }
 
-func (j *Joke) JokeMode(client *twitch.Client, msg twitch.PrivateMessage) {
+func (j *Joke) JokeMode(msg twitch.PrivateMessage) {
 	j.jokeMode = true
 	go func() {
 		for {
@@ -136,7 +132,7 @@ func (j *Joke) JokeMode(client *twitch.Client, msg twitch.PrivateMessage) {
 				j.jokeMode = false
 				return
 			default:
-				j.TellJoke(client, msg, true)
+				j.TellJoke(msg, true)
 				time.Sleep(time.Second * 10)
 			}
 		}

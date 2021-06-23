@@ -39,9 +39,10 @@ func (bc *BurtCoin) Init() {
 			log.Println("Invalid json in tokens file")
 		}
 	}
+	SubscribeUserPart(bc.OnUserPart)
 }
 
-func (bc *BurtCoin) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (bc *BurtCoin) Run(msg twitch.PrivateMessage) {
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
 	if args[1] == "give" {
 		if len(args) < 4 {
@@ -86,7 +87,7 @@ func (bc *BurtCoin) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 
 }
 
-func (bc *BurtCoin) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
+func (bc *BurtCoin) OnUserPart(msg twitch.UserPartMessage) {
 	// log.Println(fmt.Sprintf(`%s has left the channel, close down their miner if app.`, msg.User))
 	if bc.StopMining(msg.User) {
 		comm.ToChat(msg.Channel, fmt.Sprintf("%s left - turning off their miner to save my energies... or something.", msg.User))

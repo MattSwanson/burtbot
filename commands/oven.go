@@ -27,7 +27,7 @@ func (o *Oven) Init() {
 
 }
 
-func (o *Oven) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (o *Oven) Run(msg twitch.PrivateMessage) {
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
 	if len(args) < 2 {
 		return
@@ -52,10 +52,6 @@ func (o *Oven) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	case "temp":
 		comm.ToChat(msg.Channel, fmt.Sprintf("Oven is at %d degrees", o.Temperature))
 	}
-}
-
-func (o *Oven) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-
 }
 
 func (o *Oven) Preheat(temp int) {

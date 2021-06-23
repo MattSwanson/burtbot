@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gempir/go-twitch-irc/v2"
+	"github.com/MattSwanson/burtbot/comm"
 )
 
 var twitchAuthCh chan bool
@@ -24,7 +24,6 @@ var twitchAuth bool
 var twitchAccessToken string
 var twitchAppAccessToken string
 var twitchRefreshToken string
-var chatClient *twitch.Client
 var tokenMachine *TokenMachine
 
 type twitchAuthResp struct {
@@ -69,36 +68,36 @@ type EventSubscription struct {
 
 type TwitchAuthClient struct {}
 
-func (c *TwitchAuthClient) Init(client *twitch.Client) {
-	twitchAuthCh = make(chan bool)
-	/* http.HandleFunc("/twitch_authcb", twitchAuthCb)
-	http.HandleFunc("/twitch_link", getAuthLink)
-	http.HandleFunc("/eventsub_cb", eventSubCallback)
-	http.HandleFunc("/", home)
-	*/
-	chatClient = client
-	tokenMachine = getTokenMachine()
-	
-	// go http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/burtbot.app/fullchain.pem", "/etc/letsencrypt/live/burtbot.app/privkey.pem", nil)
-	twitchAuth = <-twitchAuthCh
-	fmt.Println("Auth'd for twitch api")
-	twitchAppAccessToken = c.GetAppAccessToken()
+func (c *TwitchAuthClient) Init() {
+	go func() {
+		twitchAuthCh = make(chan bool)
+		/* http.HandleFunc("/twitch_authcb", twitchAuthCb)
+		http.HandleFunc("/twitch_link", getAuthLink)
+		http.HandleFunc("/eventsub_cb", eventSubCallback)
+		http.HandleFunc("/", home)
+		*/
+		tokenMachine = getTokenMachine()
+		
+		// go http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/burtbot.app/fullchain.pem", "/etc/letsencrypt/live/burtbot.app/privkey.pem", nil)
+		twitchAuth = <-twitchAuthCh
+		fmt.Println("Auth'd for twitch api")
+		twitchAppAccessToken = c.GetAppAccessToken()
 
-	// Get active eventsubs cancel them since they likely have an out of date callback url
-	eventSubs := c.GetSubscriptions()
-	var alreadySubbed bool
-	for _, es := range eventSubs {
-		if es.Transport.Callback == os.Getenv("TWITCH_CALLBACK_URL") {
-			alreadySubbed = true
-			fmt.Println("Eventsub already active. Move along.")
-			continue
+		// Get active eventsubs cancel them since they likely have an out of date callback url
+		eventSubs := c.GetSubscriptions()
+		var alreadySubbed bool
+		for _, es := range eventSubs {
+			if es.Transport.Callback == os.Getenv("TWITCH_CALLBACK_URL") {
+				alreadySubbed = true
+				fmt.Println("Eventsub already active. Move along.")
+				continue
+			}
+			c.DeleteSubscription(es.ID)
 		}
-		c.DeleteSubscription(es.ID)
-	}
-	if !alreadySubbed {
-		c.Subscribe("channel.follow")
-	}
-
+		if !alreadySubbed {
+			c.Subscribe("channel.follow")
+		}
+	}()
 }
 
 
@@ -362,7 +361,7 @@ func EventSubCallback(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Twitch-Eventsub-Subscription-Type") == "channel.follow" && respStruct.Event.BroadcasterUserID == "38570305" {
 			const n = 100
 			s := fmt.Sprintf("Thanks for following @%s! Have %d tokens to spend on useless things...", respStruct.Event.UserName, n)
-			chatClient.Say("burtstanton", s)
+			comm.ToChat("burtstanton", s)
 			tokenMachine.GrantToken(respStruct.Event.UserName, n)
 		}
 		w.WriteHeader(200)

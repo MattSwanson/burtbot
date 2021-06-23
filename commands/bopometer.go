@@ -57,7 +57,7 @@ func (b *Bopometer) Init() {
 	comm.SubscribeToReply("bop", b.Results)
 }
 
-func (b *Bopometer) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (b *Bopometer) Run(msg twitch.PrivateMessage) {
 
 	// some one initiates the bopometer by typing the !bop command
 	// then for the next n seconds anyone else can !bop to add their "vote"
@@ -126,10 +126,6 @@ func (b *Bopometer) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			comm.ToChat(msg.Channel, fmt.Sprintf("%d: %s by %s with a %.2f rating.", i+1, ts[i].Name, artists, ts[i].Rating))
 		}
 	}
-}
-
-func (b *Bopometer) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-
 }
 
 // search rating by track / artist

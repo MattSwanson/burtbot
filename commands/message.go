@@ -14,7 +14,7 @@ func (m *Msg) Init() {
 
 }
 
-func (m *Msg) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (m *Msg) Run(msg twitch.PrivateMessage) {
 	// if !isMod(msg.User) {
 	// 	return
 	// }
@@ -25,10 +25,6 @@ func (m *Msg) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	}
 	newMsg := strings.Join(args[1:], " ")
 	comm.ToOverlay(fmt.Sprintf("tts false %s", newMsg))
-}
-
-func (m *Msg) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-
 }
 
 func (m *Msg) Help() []string {

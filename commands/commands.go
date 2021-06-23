@@ -20,10 +20,11 @@ const (
 	aliasesFileName = "./aliases.json"
 )
 
+var onPartSubscribers []func(twitch.UserPartMessage)
+
 type Command interface {
-	Run(*twitch.Client, twitch.PrivateMessage)
+	Run(twitch.PrivateMessage)
 	Init()
-	OnUserPart(*twitch.Client, twitch.UserPartMessage)
 	Help() []string
 }
 
@@ -69,14 +70,18 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 				handler.Client.Say(msg.Channel, h)
 			}
 		}
-		go cmd.Run(handler.Client, msg)
+		go cmd.Run(msg)
 	}
 }
 
+//TODO Removing OnUserPart from the command interface
+// modules that want notifcations onUserPart will need to subscribe to get notified
+// barely any commands were actually using this, so this is better
 func (handler *CmdHandler) HandlePartMsg(msg twitch.UserPartMessage) {
 	// notify any commands that require it - that a user has parted the channel
-	for _, command := range handler.Commands {
-		command.OnUserPart(handler.Client, msg)
+	for _, fn := range onPartSubscribers {
+		fmt.Printf("sending user part msg to %v", fn)
+		fn(msg)
 	}
 }
 
@@ -137,6 +142,7 @@ func (handler *CmdHandler) saveAliasesToFile() {
 		log.Println(err.Error())
 	}
 }
+
 func (handler *CmdHandler) InjectAliases(message string) string {
 	// check to see if the command entered is an alias
 	fields := strings.Fields(strings.TrimPrefix(message, "!"))
@@ -147,4 +153,9 @@ func (handler *CmdHandler) InjectAliases(message string) string {
 	// if so replace the alias with the command it represents
 	fields[0] = "!" + command
 	return strings.Join(fields, " ")
+}
+
+func SubscribeUserPart(f func(twitch.UserPartMessage)) {
+	onPartSubscribers = append(onPartSubscribers, f)
+	fmt.Println(onPartSubscribers)
 }

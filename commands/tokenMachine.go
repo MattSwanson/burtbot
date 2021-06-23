@@ -58,7 +58,7 @@ func (t *TokenMachine) Init() {
 	tm = t
 }
 
-func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (t *TokenMachine) Run(msg twitch.PrivateMessage) {
 
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
 
@@ -203,10 +203,6 @@ func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		t.GrantToken(strings.ToLower(args[2]), n)
 		comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you were given %d tokens! Use them to play games.", args[2], n))
 	}
-}
-
-func (t *TokenMachine) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-
 }
 
 func (t *TokenMachine) DeductTokens(username string, number int) bool {

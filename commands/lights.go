@@ -32,7 +32,7 @@ func (l *Lights) Init() {
 
 }
 
-func (l *Lights) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (l *Lights) Run(msg twitch.PrivateMessage) {
 	// !lights red or !lights 5500
 	if lightLock {
 		return
@@ -74,10 +74,6 @@ func (l *Lights) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		time.Sleep(time.Second * time.Duration(lightCD))
 		lightLock = false
 	}()
-}
-
-func (l *Lights) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-
 }
 
 func (l *Lights) Help() []string {

@@ -37,7 +37,7 @@ func NewSuggestionBox() *SuggestionBox {
 func (sb *SuggestionBox) Init() {
 }
 
-func (sb *SuggestionBox) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (sb *SuggestionBox) Run(msg twitch.PrivateMessage) {
 	args := strings.Fields(msg.Message)
 	if len(args) < 2 {
 		return
@@ -89,10 +89,6 @@ func (sb *SuggestionBox) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			comm.ToOverlay(fmt.Sprintf("tts %s suggested that we %s", suggestion.Username, suggestion.Text))
 		}
 	}
-}
-
-func (sb *SuggestionBox) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-
 }
 
 func (sb *SuggestionBox) saveToFile() {

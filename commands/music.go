@@ -40,7 +40,7 @@ func (m *Music) Init() {
 	}()
 }
 
-func (m *Music) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (m *Music) Run(msg twitch.PrivateMessage) {
 
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
 
@@ -181,10 +181,6 @@ func (m *Music) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		}
 		return
 	}
-}
-
-func (m *Music) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-
 }
 
 func (m *Music) getCurrentTrackTitle() (string, bool) {

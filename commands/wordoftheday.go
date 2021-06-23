@@ -12,7 +12,7 @@ type Wod struct{
 	current string
 }
 
-func (w *Wod) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (w *Wod) Run(msg twitch.PrivateMessage) {
 
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
 	if len(args) == 1 {
@@ -31,10 +31,6 @@ func (w *Wod) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 }
 
 func (w *Wod) Init() {
-
-}
-
-func (w *Wod) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 
 }
 

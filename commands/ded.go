@@ -26,7 +26,7 @@ func (d *Ded) Init() {
 
 }
 
-func (d *Ded) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (d *Ded) Run(msg twitch.PrivateMessage) {
 	if locked && !IsMod(msg.User) {
 		return
 	}
@@ -84,10 +84,6 @@ func (d *Ded) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		time.Sleep(time.Millisecond * time.Duration(1000))
 		comm.ToChat(msg.Channel, "ONE TIME!")
 	}
-}
-
-func (d *Ded) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-
 }
 
 func unlock() {

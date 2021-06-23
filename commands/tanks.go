@@ -19,7 +19,7 @@ func (t *Tanks) Init() {
 	comm.SubscribeToReply("reset", t.Stop)
 }
 
-func (t *Tanks) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (t *Tanks) Run(msg twitch.PrivateMessage) {
 	args := strings.Fields(strings.ToLower(msg.Message))
 	if len(args) < 2 {
 		return
@@ -57,10 +57,6 @@ func (t *Tanks) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	} else if args[1] == "begin" {
 		comm.ToOverlay("tanks begin")
 	}
-}
-
-func (t *Tanks) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-
 }
 
 func (t *Tanks) Stop(args []string) {

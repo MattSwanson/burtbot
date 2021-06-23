@@ -11,12 +11,8 @@ func (m *BigMouse) Init() {
 
 }
 
-func (m *BigMouse) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (m *BigMouse) Run(msg twitch.PrivateMessage) {
 	comm.ToOverlay("bigmouse")
-}
-
-func (m *BigMouse) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-
 }
 
 func (m *BigMouse) Help() []string {

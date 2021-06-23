@@ -21,7 +21,7 @@ func (n *Marquee) Init() {
 
 }
 
-func (n *Marquee) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (n *Marquee) Run(msg twitch.PrivateMessage) {
 	// if !isMod(msg.User) {
 	// 	return
 	// }
@@ -50,10 +50,6 @@ func (n *Marquee) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		return
 	}
 	comm.ToOverlay(fmt.Sprintf("marquee %s %s", args[1], string(j)))
-}
-
-func (n *Marquee) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-
 }
 
 func (m *Marquee) Help() []string {

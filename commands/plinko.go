@@ -20,7 +20,7 @@ func (p *Plinko) Init() {
 	comm.SubscribeToReply("reset", p.Stop)
 }
 
-func (p *Plinko) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (p *Plinko) Run(msg twitch.PrivateMessage) {
 	if p.TokenMachine == nil {
 		p.TokenMachine = getTokenMachine()
 	}
@@ -43,10 +43,6 @@ func (p *Plinko) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		comm.ToOverlay(fmt.Sprintf("plinko drop %s %s %s", args[2], msg.User.DisplayName, msg.User.Color))
 	}
 
-}
-
-func (p *Plinko) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-	// lame
 }
 
 func (p *Plinko) HandleResponse(args []string) {

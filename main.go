@@ -46,7 +46,8 @@ func main() {
 	client.OnConnect(func() {
 		fmt.Println("burtbot circuits activated")
 	})
-	
+
+
 	registerCommands()
 	client.Join("burtstanton")
 	comm.AddChatClient(client)
@@ -68,7 +69,7 @@ func registerCommands() {
 	handler.RegisterCommand("tokenmachine", &tokenMachine)
 
 	twitchAuthClient := commands.TwitchAuthClient{}
-	go twitchAuthClient.Init(client)
+	twitchAuthClient.Init()
 
 	//handler.RegisterCommand("nonillion", commands.Nonillion{})
 	handler.RegisterCommand("ded", &commands.Ded{})
@@ -97,7 +98,7 @@ func registerCommands() {
 	handler.RegisterCommand("bigmouse", &commands.BigMouse{})
 	handler.RegisterCommand("snake", &commands.Snake{})
 	handler.RegisterCommand("marquee", &commands.Marquee{})
-	handler.RegisterCommand("so", &commands.Shoutout{TwitchClient: &twitchAuthClient})
+	handler.RegisterCommand("so", &commands.Shoutout{})
 	handler.RegisterCommand("error", &commands.ErrorBox{})
 	handler.RegisterCommand("plinko", &commands.Plinko{})
 	handler.RegisterCommand("tanks", &commands.Tanks{})
@@ -170,7 +171,7 @@ func handleMessage(msg twitch.PrivateMessage) {
 
 
 	go handler.HandleMsg(msg)
-	go bbset.HandleMsg(client, msg)
+	go bbset.HandleMsg(msg)
 	if strings.Compare(msg.User.Name, lastMsg.User.Name) == 0 && strings.Compare(msg.Message, lastMessage+" "+lastMessage) == 0 {
 		// break the pyramid with a schlorp
 		comm.ToChat(msg.Channel, "tjportSchlorp1 tjportSchlorp2 tjportSchlorp3")

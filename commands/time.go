@@ -14,13 +14,9 @@ func (t *Tim) Init() {
 
 }
 
-func (t Tim) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+func (t Tim) Run(msg twitch.PrivateMessage) {
 	ctime := time.Now().Unix()
 	comm.ToChat(msg.Channel, fmt.Sprintf("The time is now %d", ctime))
-}
-
-func (t *Tim) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
-
 }
 
 func (t *Tim) Help() []string {
