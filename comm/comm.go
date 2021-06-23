@@ -8,14 +8,20 @@ import (
 	"context"
 	"bufio"
 	"os"
+	"strings"
+
+	"github.com/gempir/go-twitch-irc/v2"
 )
 
 var writeChannel chan string
 var readChannel chan string
+var subscribers map[string][]func([]string)
+var chatClient *twitch.Client
 
 func init() {
 	writeChannel = make(chan string)
 	readChannel = make(chan string)
+	subscribers = make(map[string][]func([]string))
 }
 
 func GetReadChannel() chan string {
@@ -28,6 +34,14 @@ func ToOverlay(s string) {
 
 func FromOverlay() string {
 	return <-readChannel
+}
+
+func AddChatClient(client *twitch.Client) {
+	chatClient = client
+}
+
+func ToChat(channelName string, msg string) {
+	chatClient.Say(channelName, msg)
 }
  
 func ConnectToOverlay() {
@@ -43,6 +57,7 @@ func ConnectToOverlay() {
 	go func() {
 		getMessagesFromTCP(conn)
 	}()
+	go notifySubscribers()
 	ctx, cancelPing := context.WithCancel(context.Background())
 	pingOverlay(ctx, writeChannel)
 	fmt.Println("Connected to overlay")
@@ -77,14 +92,33 @@ func pingOverlay(ctx context.Context, c chan string) {
 	}(ctx)
 }
 
+func SubscribeToReply(command string, f func([]string)) {
+	if _, ok := subscribers[command]; !ok {
+		subscribers[command] = []func([]string){} 
+	}
+	subscribers[command] = append(subscribers[command], f)
+}
+
+// operating on its own goroutine
 func getMessagesFromTCP(conn net.Conn) {
 	scanner := bufio.NewScanner(conn)
 	for scanner.Scan() {
 		s := scanner.Text()
-		//fmt.Println(s)
 		readChannel <- s
 	}
 	if err := scanner.Err(); err != nil {
 		log.Println(err)
+	}
+}
+
+func notifySubscribers() {
+	for s := range readChannel {
+		args := strings.Fields(s)
+		for _, f := range subscribers[args[0]] {
+			f(args)
+		}
+		if args[0] == "reset" {
+			break
+		}
 	}
 }

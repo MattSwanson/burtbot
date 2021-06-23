@@ -27,14 +27,16 @@ var spotifyAuthCh = make(chan *spotify.Client)
 var spotifyState = "test123"
 
 func (m *Music) Init() {
+	go func() {
+		http.HandleFunc("/spotify_authcb", completeAuth)
+		http.HandleFunc("/spotify_link", getSpotifyLink)
+		go http.ListenAndServeTLS(":8079", "/etc/letsencrypt/live/burtbot.app/fullchain.pem", "/etc/letsencrypt/live/burtbot.app/privkey.pem", nil)
 
-	http.HandleFunc("/spotify_authcb", completeAuth)
-	http.HandleFunc("/spotify_link", getSpotifyLink)
-	go http.ListenAndServeTLS(":8079", "/etc/letsencrypt/live/burtbot.app/fullchain.pem", "/etc/letsencrypt/live/burtbot.app/privkey.pem", nil)
-
-	fmt.Println("Awating Spotify authentication...")
-	m.SpotifyClient = <-spotifyAuthCh
-	fmt.Println("Logged in to Spotify")
+		m.TokenMachine = getTokenMachine()
+		fmt.Println("Awating Spotify authentication...")
+		m.SpotifyClient = <-spotifyAuthCh
+		fmt.Println("Logged in to Spotify")
+	}()
 }
 
 func (m *Music) Run(client *twitch.Client, msg twitch.PrivateMessage) {

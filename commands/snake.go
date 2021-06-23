@@ -14,7 +14,7 @@ type Snake struct {
 }
 
 func (s *Snake) Init() {
-
+	comm.SubscribeToReply("reset", s.Stop)
 }
 
 func (s *Snake) Run(client *twitch.Client, msg twitch.PrivateMessage) {
@@ -42,6 +42,10 @@ func (s *Snake) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 
 func (s *Snake) SetRunning(b bool) {
 	s.isRunning = b
+}
+
+func (s *Snake) Stop(args []string) {
+	s.isRunning = false
 }
 
 func (s *Snake) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {

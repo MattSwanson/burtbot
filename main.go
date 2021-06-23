@@ -24,13 +24,10 @@ var lastMsg twitch.PrivateMessage
 var schlorpLock = false
 var schlorpCD = 10
 
-var readChannel chan string
-
 var bopometer *commands.Bopometer
 
 func main() {
 
-	readChannel = comm.GetReadChannel()
 	go comm.ConnectToOverlay()
 
 	// init db connection
@@ -52,6 +49,7 @@ func main() {
 	
 	registerCommands()
 	client.Join("burtstanton")
+	comm.AddChatClient(client)
 	StartWebServer(handler)
 	
 	err = client.Connect()
@@ -64,15 +62,13 @@ func registerCommands() {
 	handler = commands.NewCmdHandler(client)
 
 	burtCoin := commands.BurtCoin{}
-	burtCoin.Init()
 	handler.RegisterCommand("burtcoin", &burtCoin)
 
 	tokenMachine := commands.TokenMachine{BurtCoin: &burtCoin}
-	tokenMachine.Init()
 	handler.RegisterCommand("tokenmachine", &tokenMachine)
 
 	twitchAuthClient := commands.TwitchAuthClient{}
-	go twitchAuthClient.Init(client, &tokenMachine)
+	go twitchAuthClient.Init(client)
 
 	//handler.RegisterCommand("nonillion", commands.Nonillion{})
 	handler.RegisterCommand("ded", &commands.Ded{})
@@ -81,55 +77,40 @@ func registerCommands() {
 	handler.RegisterCommand("offbyone", &commands.OffByOneCounter{})
 
 	jokes := commands.Joke{}
-	jokes.Init()
 	handler.RegisterCommand("joke", &jokes)
 	
 	handler.RegisterCommand("lights", commands.NewLights())
 	handler.RegisterCommand("time", &commands.Tim{})
 	handler.RegisterCommand("sb", commands.NewSuggestionBox())
 
-	musicManager := commands.Music{TokenMachine: &tokenMachine}
-	go musicManager.Init()
+	musicManager := commands.Music{}
 	handler.RegisterCommand("music", &musicManager)
 
 	bbset = commands.Bbset{ReservedCommands: &handler.Commands}
-	bbset.Init()
 	handler.RegisterCommand("bbset", &bbset)
 
 	bop := commands.Bopometer{Music: &musicManager}
-	bop.Init()
 	handler.RegisterCommand("bop", &bop)
 	bopometer = &bop
 
 	handler.RegisterCommand("go", &commands.Gopher{})
 	handler.RegisterCommand("bigmouse", &commands.BigMouse{})
-
-	snake := commands.Snake{}
-	handler.RegisterCommand("snake", &snake)
+	handler.RegisterCommand("snake", &commands.Snake{})
 	handler.RegisterCommand("marquee", &commands.Marquee{})
 	handler.RegisterCommand("so", &commands.Shoutout{TwitchClient: &twitchAuthClient})
 	handler.RegisterCommand("error", &commands.ErrorBox{})
-
-	plinko := commands.Plinko{TokenMachine: &tokenMachine}
-	handler.RegisterCommand("plinko", &plinko)
-
-	tanks := commands.Tanks{}
-	handler.RegisterCommand("tanks", &tanks)
+	handler.RegisterCommand("plinko", &commands.Plinko{})
+	handler.RegisterCommand("tanks", &commands.Tanks{})
 	handler.RegisterCommand("lo", &commands.LightsOut{})
 
 	triviaManager = commands.NewTrivia()
 	handler.RegisterCommand("trivia", triviaManager)
-
 	handler.RegisterCommand("wod", &commands.Wod{})
 	handler.RegisterCommand("protocolr", &commands.ProtoR{})
 	handler.RegisterCommand("incomplete", &commands.Incomplete{})
 	bingo := commands.NewBingo(&twitchAuthClient, &tokenMachine)
 	handler.RegisterCommand("bingo", bingo)
-	//importSuggestions(&twitchAuthClient, sb.Suggestions)
-
 	handler.LoadAliases()
-	go handleResults(&plinko, &tokenMachine, &snake, &tanks, &bop)
-
 }
 
 func handleMessage(msg twitch.PrivateMessage) {
@@ -223,32 +204,6 @@ func handleUserPart(msg twitch.UserPartMessage) {
 func handleUserJoin(msg twitch.UserJoinMessage) {
 	//log.Printf(`%s has joined the channel.`, msg.User)
 }
-
-
-
-func handleResults(
-	p *commands.Plinko,
-	t *commands.TokenMachine,
-	snake *commands.Snake,
-	tanks *commands.Tanks,
-	b *commands.Bopometer) {
-	for s := range readChannel {
-		args := strings.Fields(s)
-		switch args[0] {
-		case "plinko":
-			// plinko result username n
-			//p.Stop
-			p.HandleResponse(args)
-		case "bop":
-			b.Results(client, args[2])
-		case "reset":
-			snake.SetRunning(false)
-			p.Stop()
-			tanks.Stop()
-		}
-	}
-}
-
 
 func unlockSchlorp() {
 	time.Sleep(time.Second * time.Duration(schlorpCD))

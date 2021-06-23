@@ -49,6 +49,7 @@ func (handler *CmdHandler) RegisterCommand(pattern string, c Command) error {
 	if _, ok := handler.Commands[pattern]; ok {
 		return errors.New("Command already registered with that pattern")
 	}
+	c.Init()
 	handler.Commands[pattern] = c
 	return nil
 }

@@ -13,6 +13,8 @@ import (
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
+var tm *TokenMachine
+
 type TokenMachine struct {
 	lastKick            time.Time
 	lastDistract        time.Time
@@ -32,22 +34,27 @@ const (
 	distractCooldown       = 24 // hours
 )
 
-func (tm *TokenMachine) Init() {
+func getTokenMachine() *TokenMachine {
+	return tm
+}
+
+func (t *TokenMachine) Init() {
 	rand.Seed(time.Now().Unix())
 	// tokens init
-	tm.Tokens = make(map[string]int)
-	tm.persist = true
+	t.Tokens = make(map[string]int)
+	t.persist = true
 	j, err := os.ReadFile("./tokens.json")
 	if err != nil {
 		log.Println("Couldn't load token info from file")
-		tm.persist = false
+		t.persist = false
 	} else {
-		err = json.Unmarshal(j, &tm.Tokens)
+		err = json.Unmarshal(j, &t.Tokens)
 		if err != nil {
 			log.Println("Invalid json in tokens file")
-			tm.persist = false
+			t.persist = false
 		}
 	}
+	tm = t
 }
 
 func (t *TokenMachine) Run(client *twitch.Client, msg twitch.PrivateMessage) {

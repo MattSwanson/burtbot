@@ -16,7 +16,7 @@ type Tanks struct {
 }
 
 func (t *Tanks) Init() {
-
+	comm.SubscribeToReply("reset", t.Stop)
 }
 
 func (t *Tanks) Run(client *twitch.Client, msg twitch.PrivateMessage) {
@@ -63,7 +63,7 @@ func (t *Tanks) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 
 }
 
-func (t *Tanks) Stop() {
+func (t *Tanks) Stop(args []string) {
 	t.running = false
 }
 

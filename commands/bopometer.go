@@ -54,6 +54,7 @@ func (b *Bopometer) Init() {
 			log.Println("Invalid json in bops file")
 		}
 	}
+	comm.SubscribeToReply("bop", b.Results)
 }
 
 func (b *Bopometer) Run(client *twitch.Client, msg twitch.PrivateMessage) {
@@ -64,7 +65,7 @@ func (b *Bopometer) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	// after completion display results and write the current slice to file to persist
 
 	if b.Music.SpotifyClient == nil {
-		client.Say(msg.Channel, "Not logged into Spotify. Can't user music commands right now. Tell the streamer to log in and not be a dolt.")
+		comm.ToChat(msg.Channel, "Not logged into Spotify. Can't user music commands right now. Tell the streamer to log in and not be a dolt.")
 		return
 	}
 
@@ -75,25 +76,25 @@ func (b *Bopometer) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		if !b.isBopping {
 			trackID, isPlaying := b.Music.getCurrentTrackID()
 			if !isPlaying {
-				client.Say(msg.Channel, "No track is currently playing.")
+				comm.ToChat(msg.Channel, "No track is currently playing.")
 				return
 			}
 
 			// start bopping
 			b.isBopping = true
 			b.hasBopped[msg.User.Name] = true
-			client.Say(msg.Channel, fmt.Sprintf("BOP BOP BOP @%s has started the bopometer! Spam BOP to bop", msg.User.DisplayName))
+			comm.ToChat(msg.Channel, fmt.Sprintf("BOP BOP BOP @%s has started the bopometer! Spam BOP to bop", msg.User.DisplayName))
 			artists, _ := b.Music.getCurrentTrackArtists()
 			song, _ := b.Music.getCurrentTrackTitle()
 			b.currentTrack = trackInfo{Name: song, Artists: artists, Rating: 1, ID: trackID}
 			comm.ToOverlay("bop start")
 			c := make(chan int)
 			go func(chan int) {
-				client.Say(msg.Channel, fmt.Sprintf("Bopping has %d seconds left! !bop away!", <-c))
+				comm.ToChat(msg.Channel, fmt.Sprintf("Bopping has %d seconds left! !bop away!", <-c))
 			}(c)
 			go func(chan int) {
 				bopTimer(c)
-				client.Say(msg.Channel, "Bopping has concluded.")
+				comm.ToChat(msg.Channel, "Bopping has concluded.")
 				comm.ToOverlay("bop stop")
 				b.isBopping = false
 			}(c)
@@ -115,10 +116,10 @@ func (b *Bopometer) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			ts = append(ts, track)
 		}
 		sort.Sort(ts)
-		client.Say(msg.Channel, "Top 3 BOPs:")
+		comm.ToChat(msg.Channel, "Top 3 BOPs:")
 		for i := 0; i < 3; i++ {
 			if i > len(ts) - 1 {
-				client.Say(msg.Channel, fmt.Sprintf("%d: ???", i+1))
+				comm.ToChat(msg.Channel, fmt.Sprintf("%d: ???", i+1))
 				continue
 			}
 			artists := ""
@@ -128,7 +129,7 @@ func (b *Bopometer) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 					artists += ", "
 				}
 			}
-			client.Say(msg.Channel, fmt.Sprintf("%d: %s by %s with a %.2f rating.", i+1, ts[i].Name, artists, ts[i].Rating))
+			comm.ToChat(msg.Channel, fmt.Sprintf("%d: %s by %s with a %.2f rating.", i+1, ts[i].Name, artists, ts[i].Rating))
 		}
 	}
 }
@@ -176,7 +177,8 @@ func (b *Bopometer) AddBops(n int) {
 	comm.ToOverlay(fmt.Sprintf("bop add %d", n))
 }
 
-func (b *Bopometer) Results(client *twitch.Client, rating string) {
+func (b *Bopometer) Results(args []string) {
+	rating := args[2]
 	res, err := strconv.ParseFloat(rating, 32)
 	if err != nil {
 		log.Println("invalid bop result from overlay", err)
@@ -184,11 +186,11 @@ func (b *Bopometer) Results(client *twitch.Client, rating string) {
 	b.currentTrack.Rating = float32(res)
 	if track, exists := b.ratings[b.currentTrack.ID]; exists {
 		if b.currentTrack.Rating > track.Rating {
-			client.Say("burtstanton", fmt.Sprintf("%s has set a new record with a %.2f rating on the Bopometer!", track.Name, b.currentTrack.Rating))
+			comm.ToChat("burtstanton", fmt.Sprintf("%s has set a new record with a %.2f rating on the Bopometer!", track.Name, b.currentTrack.Rating))
 			b.ratings[b.currentTrack.ID] = b.currentTrack
 		}
 	} else {
-		client.Say("burtstanton", fmt.Sprintf("%s registered a rating of %.2f on the Bopometer!", b.currentTrack.Name, b.currentTrack.Rating))
+		comm.ToChat("burtstanton", fmt.Sprintf("%s registered a rating of %.2f on the Bopometer!", b.currentTrack.Name, b.currentTrack.Rating))
 		b.ratings[b.currentTrack.ID] = b.currentTrack
 	}
 	b.hasBopped = map[string]bool{}

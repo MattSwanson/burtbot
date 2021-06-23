@@ -67,10 +67,9 @@ type EventSubscription struct {
 	}
 }
 
-type TwitchAuthClient struct {
-}
+type TwitchAuthClient struct {}
 
-func (c *TwitchAuthClient) Init(client *twitch.Client, tm *TokenMachine) {
+func (c *TwitchAuthClient) Init(client *twitch.Client) {
 	twitchAuthCh = make(chan bool)
 	/* http.HandleFunc("/twitch_authcb", twitchAuthCb)
 	http.HandleFunc("/twitch_link", getAuthLink)
@@ -78,7 +77,7 @@ func (c *TwitchAuthClient) Init(client *twitch.Client, tm *TokenMachine) {
 	http.HandleFunc("/", home)
 	*/
 	chatClient = client
-	tokenMachine = tm
+	tokenMachine = getTokenMachine()
 	
 	// go http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/burtbot.app/fullchain.pem", "/etc/letsencrypt/live/burtbot.app/privkey.pem", nil)
 	twitchAuth = <-twitchAuthCh

@@ -16,10 +16,14 @@ type Plinko struct {
 }
 
 func (p *Plinko) Init() {
-
+	comm.SubscribeToReply("plinko", p.HandleResponse)
+	comm.SubscribeToReply("reset", p.Stop)
 }
 
 func (p *Plinko) Run(client *twitch.Client, msg twitch.PrivateMessage) {
+	if p.TokenMachine == nil {
+		p.TokenMachine = getTokenMachine()
+	}
 	args := strings.Fields(strings.ToLower(msg.Message))
 	if len(args) < 2 {
 		return
@@ -32,8 +36,8 @@ func (p *Plinko) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			return
 		}
 		cost := 1
-		if args[2] == "all" && numTokens >= 9 {
-			cost = 9
+		if args[2] == "all" && numTokens >= 5 {
+			cost = 5
 		}
 		p.TokenMachine.setTokenCount(msg.User.Name, numTokens-cost)
 		comm.ToOverlay(fmt.Sprintf("plinko drop %s %s %s", args[2], msg.User.DisplayName, msg.User.Color))
@@ -72,8 +76,8 @@ func (p *Plinko) HandleResponse(args []string) {
 	}
 }
 
-func (p *Plinko) Stop() {
-	comm.ToOverlay("plinko stop")
+func (p *Plinko) Stop(args []string) {
+	//comm.ToOverlay("plinko stop")
 	p.running = false
 }
 
