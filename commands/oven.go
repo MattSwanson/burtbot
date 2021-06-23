@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
@@ -34,22 +35,22 @@ func (o *Oven) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	switch args[1] {
 	case "preheat":
 		if len(args) != 3 {
-			client.Say(msg.Channel, "Use !oven preheat <temperature>")
+			comm.ToChat(msg.Channel, "Use !oven preheat <temperature>")
 			return
 		}
 		temp, err := strconv.Atoi(args[2])
 		if err != nil {
-			client.Say(msg.Channel, "The oven can only heat up to temperatures specified by numbers...")
+			comm.ToChat(msg.Channel, "The oven can only heat up to temperatures specified by numbers...")
 			return
 		}
-		client.Say(msg.Channel, fmt.Sprintf("Preheating the oven to %d degrees. This may take a while...", temp))
+		comm.ToChat(msg.Channel, fmt.Sprintf("Preheating the oven to %d degrees. This may take a while...", temp))
 		o.BakeTemp = temp
 		go func() {
 			o.Preheat(temp)
-			client.Say(msg.Channel, fmt.Sprintf("Ding! Oven is heated to %d", temp))
+			comm.ToChat(msg.Channel, fmt.Sprintf("Ding! Oven is heated to %d", temp))
 		}()
 	case "temp":
-		client.Say(msg.Channel, fmt.Sprintf("Oven is at %d degrees", o.Temperature))
+		comm.ToChat(msg.Channel, fmt.Sprintf("Oven is at %d degrees", o.Temperature))
 	}
 }
 

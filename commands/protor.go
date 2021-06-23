@@ -1,11 +1,14 @@
 package commands
 
-import "github.com/gempir/go-twitch-irc/v2"
+import (
+	"github.com/MattSwanson/burtbot/comm"
+	"github.com/gempir/go-twitch-irc/v2"
+)
 
 type ProtoR struct{}
 
 func (p *ProtoR) Run(client *twitch.Client, msg twitch.PrivateMessage) {
-	client.Say(msg.Channel, "Check out my game on Youtube! https://youtu.be/dQw4w9WgXcQ")
+	comm.ToChat(msg.Channel, "Check out my game on Youtube! https://youtu.be/dQw4w9WgXcQ")
 }
 
 func (p *ProtoR) Init() {

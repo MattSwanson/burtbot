@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
@@ -15,11 +16,11 @@ func (i *Incomplete) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
 	if len(args) <= 1 {
 		i.count++
-		client.Say(msg.Channel, "Oh, another uhh...")
+		comm.ToChat(msg.Channel, "Oh, another uhh...")
 		return
 	}
 	if args[1] == "count" {
-		client.Say(msg.Channel, fmt.Sprintf("Been lost in thought %d times today.", i.count))
+		comm.ToChat(msg.Channel, fmt.Sprintf("Been lost in thought %d times today.", i.count))
 	}
 }
 

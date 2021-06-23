@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
@@ -23,7 +24,7 @@ func (s *Shoutout) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		return
 	}
 	if !s.TwitchClient.GetAuthStatus() {
-		client.Say(msg.Channel, "I'd shout them out or whatever but I don't have \"ACCESS\" to the info... hint hint.")
+		comm.ToChat(msg.Channel, "I'd shout them out or whatever but I don't have \"ACCESS\" to the info... hint hint.")
 		return
 	}
 	args := strings.Fields(strings.ToLower(msg.Message))
@@ -32,7 +33,7 @@ func (s *Shoutout) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	}
 	u := s.TwitchClient.GetUser(args[1])
 	if u.UserID == "" {
-		client.Say(msg.Channel, "Sorry, I don't shout out non-existant users. Not for free at least.")
+		comm.ToChat(msg.Channel, "Sorry, I don't shout out non-existant users. Not for free at least.")
 		return
 	}
 	ci := s.TwitchClient.GetChannelInfo(u.UserID)
@@ -45,17 +46,17 @@ func (s *Shoutout) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	r := rand.Intn(100)
 	if len(args) == 3 {
 		if args[2] == "please" || args[2] == "plz" {
-			client.Say(msg.Channel, "Fine...")
-			client.Say(msg.Channel, fmt.Sprintf("Check out %s on their twitch channel: http://twitch.tv/%[1]s", u.DisplayName))
-			client.Say(msg.Channel, fmt.Sprintf("They were last seen streaming %s. Whatever that is.", game))
+			comm.ToChat(msg.Channel, "Fine...")
+			comm.ToChat(msg.Channel, fmt.Sprintf("Check out %s on their twitch channel: http://twitch.tv/%[1]s", u.DisplayName))
+			comm.ToChat(msg.Channel, fmt.Sprintf("They were last seen streaming %s. Whatever that is.", game))
 			return
 		}
 	}
 	if r < 80 {
-		client.Say(msg.Channel, "Nah. Maybe some other time.")
+		comm.ToChat(msg.Channel, "Nah. Maybe some other time.")
 	} else {
-		client.Say(msg.Channel, fmt.Sprintf("CHECK OUT %s ON AT http://twitch.tv/%[1]s", u.DisplayName))
-		client.Say(msg.Channel, fmt.Sprintf("THEY WERE LAST SEEN STREAMING %s. WHATEVER THAT IS.", game))
+		comm.ToChat(msg.Channel, fmt.Sprintf("CHECK OUT %s ON AT http://twitch.tv/%[1]s", u.DisplayName))
+		comm.ToChat(msg.Channel, fmt.Sprintf("THEY WERE LAST SEEN STREAMING %s. WHATEVER THAT IS.", game))
 	}
 }
 

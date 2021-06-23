@@ -56,7 +56,7 @@ func (sb *SuggestionBox) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		}
 		sb.Suggestions = append(sb.Suggestions, suggestion)
 		db.AddSuggestion(suggestion)
-		client.Say(msg.Channel, fmt.Sprintf("Thank you @%s. Your feedback has been noted.", msg.User.DisplayName))
+		comm.ToChat(msg.Channel, fmt.Sprintf("Thank you @%s. Your feedback has been noted.", msg.User.DisplayName))
 		sb.saveToFile()
 		return
 	}
@@ -64,24 +64,24 @@ func (sb *SuggestionBox) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		if len(args) < 3 {
 			suggs, err := db.GetSuggestions()
 			if err != nil {
-				client.Say(msg.Channel, "Sorry, can't help you there. Something odd happened")
+				comm.ToChat(msg.Channel, "Sorry, can't help you there. Something odd happened")
 				log.Println("couldn't get all suggestions: ", err)
 				return
 			}
 			for k, s := range suggs {
-				client.Say(msg.Channel, fmt.Sprintf("%d. %s", k+1, s.Text))
+				comm.ToChat(msg.Channel, fmt.Sprintf("%d. %s", k+1, s.Text))
 			}
 			return
 		}
 		if i, err := strconv.Atoi(args[2]); err == nil && i <= len(sb.Suggestions) && i > 0 {
 			suggestion := sb.Suggestions[i-1]
 			str := fmt.Sprintf("Suggestion #%d from %s:", i, suggestion.Username)
-			client.Say(msg.Channel, str)
-			client.Say(msg.Channel, suggestion.Text)
+			comm.ToChat(msg.Channel, str)
+			comm.ToChat(msg.Channel, suggestion.Text)
 		}
 	}
 	if args[1] == "count" {
-		client.Say(msg.Channel, fmt.Sprintf("There have been %d very good and reasonable suggestions.", len(sb.Suggestions)))
+		comm.ToChat(msg.Channel, fmt.Sprintf("There have been %d very good and reasonable suggestions.", len(sb.Suggestions)))
 	}
 
 	if args[1] == "all" {

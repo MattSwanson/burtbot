@@ -11,6 +11,7 @@ import (
 	"time"
 	"context"
 
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
@@ -79,11 +80,11 @@ func (t *Trivia) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	if args[1] == "categories" {
 		categories, err := getCategories()
 		if err != nil {
-			client.Say(msg.Channel, "Couldn't get the trivia categories... Sorry.")
+			comm.ToChat(msg.Channel, "Couldn't get the trivia categories... Sorry.")
 			return
 		}
 		for _, category := range categories {
-			client.Say(msg.Channel, fmt.Sprintf("%d. %s", category.ID, category.Name))
+			comm.ToChat(msg.Channel, fmt.Sprintf("%d. %s", category.ID, category.Name))
 		}
 		return
 	}
@@ -98,7 +99,7 @@ func (t *Trivia) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		// get the questions from the api
 		err = t.getQuestions(catNumber)
 		if err != nil {
-			client.Say(msg.Channel, "I couldn't get any trivia questions. Everyone knows everything anyways.")
+			comm.ToChat(msg.Channel, "I couldn't get any trivia questions. Everyone knows everything anyways.")
 			log.Println(err.Error())
 			return
 		}
@@ -111,7 +112,7 @@ func (t *Trivia) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	
 	// stop
 	if args[1] == "stop" && IsMod(msg.User) && triviaCancel != nil {
-		client.Say(msg.Channel, fmt.Sprintf("Stopping trivia because @%s hates fun", msg.User.DisplayName))
+		comm.ToChat(msg.Channel, fmt.Sprintf("Stopping trivia because @%s hates fun", msg.User.DisplayName))
 		triviaCancel()
 		triviaCancel = nil
 	}
@@ -157,7 +158,7 @@ func (t *Trivia) getQuestions(category int) error {
 
 func (t *Trivia) run(ctx context.Context, client *twitch.Client, channel string) {
 	// ask a question
-	client.Say(channel, t.questions[t.roundNumber].Text)
+	comm.ToChat(channel, t.questions[t.roundNumber].Text)
 	// wait for answer
 	ticker := time.NewTicker(time.Second)
 	tick := 0
@@ -183,7 +184,7 @@ func (t *Trivia) run(ctx context.Context, client *twitch.Client, channel string)
 			case <-ticker.C:
 				tick++
 				if tick >= roundTime {
-					client.Say(channel, "times up, next question")
+					comm.ToChat(channel, "times up, next question")
 					break Loop
 				}
 		}	

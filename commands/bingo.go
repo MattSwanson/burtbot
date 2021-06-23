@@ -63,7 +63,7 @@ func (b *Bingo) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			if b.validateWinner(msg.User.DisplayName) {
 				// winrar
 				numTokens := cardCost * len(b.players)
-				client.Say(msg.Channel, fmt.Sprintf("@%s has Bingo! They win %d tokens!", msg.User.DisplayName, numTokens))
+				comm.ToChat(msg.Channel, fmt.Sprintf("@%s has Bingo! They win %d tokens!", msg.User.DisplayName, numTokens))
 				comm.ToOverlay(fmt.Sprintf("bingo winner %s %d", msg.User.DisplayName, numTokens))
 				// alot tokens to winrar
 				b.tokenMachine.GrantToken(msg.User.DisplayName, numTokens)
@@ -72,7 +72,7 @@ func (b *Bingo) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 				b.Start(client, msg.Channel)
 				return
 			}
-			client.Say(msg.Channel, fmt.Sprintf("@%s, it would appear you don't have bingo.", msg.User.DisplayName))
+			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, it would appear you don't have bingo.", msg.User.DisplayName))
 		}
 		return
 	}
@@ -86,27 +86,27 @@ func (b *Bingo) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	if args[1] == "join" && b.running {
 		if _, ok := b.players[msg.User.DisplayName]; ok {
 			// user already joined
-			client.Say(msg.Channel, fmt.Sprintf("@%s, you've already joined.", msg.User.DisplayName))
+			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you've already joined.", msg.User.DisplayName))
 			return
 		}
 
 		// check to see if they have enough tokens
 		if !b.tokenMachine.DeductTokens(msg.User.DisplayName, cardCost) {
-			client.Say(msg.Channel, fmt.Sprintf("@%s, bingo cards cost %d tokens. You have only %d.", 
+			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, bingo cards cost %d tokens. You have only %d.", 
 				msg.User.DisplayName, cardCost, b.tokenMachine.getTokenCount(msg.User)))
 			return
 		}
 		url, err := b.userJoined(msg.User.DisplayName)
 		if err != nil {
 			b.tokenMachine.GrantToken(msg.User.DisplayName, cardCost)
-			client.Say(msg.Channel, fmt.Sprintf("Sorry @%s, couldn't get you resgistered. Try again later. Your tokens have been refunded.", msg.User.DisplayName))
+			comm.ToChat(msg.Channel, fmt.Sprintf("Sorry @%s, couldn't get you resgistered. Try again later. Your tokens have been refunded.", msg.User.DisplayName))
 			return
 		}
-		client.Say(msg.Channel, fmt.Sprintf("@%s see your card here: %s", msg.User.DisplayName, url))
+		comm.ToChat(msg.Channel, fmt.Sprintf("@%s see your card here: %s", msg.User.DisplayName, url))
 	}
 
 	if args[1] == "stop" && b.running && IsMod(msg.User) {
-		client.Say(msg.Channel, "Deactivating Bingo circuits.")
+		comm.ToChat(msg.Channel, "Deactivating Bingo circuits.")
 		b.running = false
 		b.drawCancelFunc()
 		comm.ToOverlay("bingo reset")
@@ -149,11 +149,11 @@ func (b *Bingo) Start(client *twitch.Client, channelName string) {
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		b.drawCancelFunc = cancelFunc
 		go func(ctx context.Context, chatChannel string) {
-			client.Say(chatChannel, fmt.Sprintf("A new round of bingo will start in %d seconds.", waitTime))
-			client.Say(chatChannel, fmt.Sprintf("Type !bingo join to buy a card for %d tokens.", cardCost))
+			comm.ToChat(chatChannel, fmt.Sprintf("A new round of bingo will start in %d seconds.", waitTime))
+			comm.ToChat(chatChannel, fmt.Sprintf("Type !bingo join to buy a card for %d tokens.", cardCost))
 			// Wait 30 seconds for people to join before starting
 			time.Sleep(time.Second * waitTime)
-			client.Say(chatChannel, "Bingo will now commence.")
+			comm.ToChat(chatChannel, "Bingo will now commence.")
 			t := time.NewTicker(time.Second * drawTime)
 			defer t.Stop()
 			for {
@@ -162,8 +162,8 @@ func (b *Bingo) Start(client *twitch.Client, channelName string) {
 					return
 				case <-t.C:
 					if len(b.hopper) <= 0 {
-						client.Say(chatChannel, "There are no balls left... is anyone even paying attention?")
-						client.Say(chatChannel, "Looks like no one won bingo... starting another game soon")
+						comm.ToChat(chatChannel, "There are no balls left... is anyone even paying attention?")
+						comm.ToChat(chatChannel, "Looks like no one won bingo... starting another game soon")
 						b.Start(client, chatChannel)
 						return
 					}

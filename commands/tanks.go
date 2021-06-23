@@ -43,13 +43,13 @@ func (t *Tanks) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		}
 		angle, err := strconv.Atoi(args[2])
 		if err != nil || angle < 0 || angle > 360 {
-			client.Say(msg.Channel, "Invalid angle")
+			comm.ToChat(msg.Channel, "Invalid angle")
 			return
 		}
 
 		v, err := strconv.ParseFloat(args[3], 64)
 		if err != nil || v <= 0 {
-			client.Say(msg.Channel, "Invalid velocity")
+			comm.ToChat(msg.Channel, "Invalid velocity")
 			return
 		}
 

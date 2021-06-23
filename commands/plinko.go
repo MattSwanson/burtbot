@@ -32,7 +32,7 @@ func (p *Plinko) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	if args[1] == "drop" && len(args) >= 3 {
 		numTokens := p.TokenMachine.getTokenCount(msg.User)
 		if numTokens <= 0 {
-			client.Say(msg.Channel, fmt.Sprintf("Sorry @%s, you have no tokens. Plinko costs 1 token per drop.", msg.User.DisplayName))
+			comm.ToChat(msg.Channel, fmt.Sprintf("Sorry @%s, you have no tokens. Plinko costs 1 token per drop.", msg.User.DisplayName))
 			return
 		}
 		cost := 1
@@ -63,7 +63,7 @@ func (p *Plinko) HandleResponse(args []string) {
 		} else {
 			s = fmt.Sprintf("@%s, YOU GET NOTHING! GOOD DAY!", args[2])
 		}
-		//client.Say("burtstanton", s)
+		//comm.ToChat("burtstanton", s)
 		mMsg := MarqueeMsg{
 			RawMessage: s,
 			Emotes:     "",

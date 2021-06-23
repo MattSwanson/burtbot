@@ -4,6 +4,7 @@ import (
 	"strings"
 	"fmt"
 
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
@@ -17,15 +18,15 @@ func (w *Wod) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	if len(args) == 1 {
 		// show the wod
 		if w.current == "" {
-			client.Say(msg.Channel, "There is no word of the day... what a boring day.")
+			comm.ToChat(msg.Channel, "There is no word of the day... what a boring day.")
 			return
 		}
-		client.Say(msg.Channel, fmt.Sprintf("The word of the day is: %s", w.current))
+		comm.ToChat(msg.Channel, fmt.Sprintf("The word of the day is: %s", w.current))
 	}	
 	if len(args) > 2 && args[1] == "set" && IsMod(msg.User) {
 		// set the wod
 		w.current = args[2]
-		client.Say(msg.Channel, fmt.Sprintf("The word of the day is now: %s", w.current))
+		comm.ToChat(msg.Channel, fmt.Sprintf("The word of the day is now: %s", w.current))
 	}
 }
 

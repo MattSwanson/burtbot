@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
@@ -48,15 +49,15 @@ func (b *Bbset) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	// args[1] will be the name of the command
 	// anything beyond will be the text to save
 	if len(args) < 2 {
-		client.Say(msg.Channel, "Please provide a command to create")
+		comm.ToChat(msg.Channel, "Please provide a command to create")
 		return
 	}
 	if _, ok := (*b.ReservedCommands)[args[1]]; ok {
-		client.Say(msg.Channel, "There is already a bot function with that name")
+		comm.ToChat(msg.Channel, "There is already a bot function with that name")
 		return
 	}
 	if len(args) < 3 {
-		client.Say(msg.Channel, "Nothing provided to say...")
+		comm.ToChat(msg.Channel, "Nothing provided to say...")
 		return
 	}
 	_, ok := b.commands[args[1]]
@@ -64,17 +65,17 @@ func (b *Bbset) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		// Is this marked for removal
 		if args[2] == "remove" {
 			delete(b.commands, args[1])
-			client.Say(msg.Channel, fmt.Sprintf("Removed command %s", args[1]))
+			comm.ToChat(msg.Channel, fmt.Sprintf("Removed command %s", args[1]))
 			if b.persist {
 				b.saveCommandsToFile()
 			}
 			return
 		}
-		client.Say(msg.Channel, "There is already a command with that name")
+		comm.ToChat(msg.Channel, "There is already a command with that name")
 		return
 	}
 	b.commands[args[1]] = strings.Join(args[2:], " ")
-	client.Say(msg.Channel, fmt.Sprintf("!%s set for: %s", args[1], b.commands[args[1]]))
+	comm.ToChat(msg.Channel, fmt.Sprintf("!%s set for: %s", args[1], b.commands[args[1]]))
 	if b.persist {
 		b.saveCommandsToFile()
 	}
@@ -86,7 +87,7 @@ func (b *Bbset) HandleMsg(client *twitch.Client, msg twitch.PrivateMessage) {
 		return
 	}
 	if txt, ok := b.commands[args[0]]; ok {
-		client.Say(msg.Channel, txt)
+		comm.ToChat(msg.Channel, txt)
 	}
 }
 

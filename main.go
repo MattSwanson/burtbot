@@ -138,16 +138,16 @@ func handleMessage(msg twitch.PrivateMessage) {
 			originalCommand := strings.Join(fields[3:], " ")
 			err := handler.RegisterAlias(fields[2], originalCommand)			
 			if err != nil {
-				client.Say(msg.Channel, fmt.Sprintf("The alias [%s] already exists.", fields[2]))
+				comm.ToChat(msg.Channel, fmt.Sprintf("The alias [%s] already exists.", fields[2]))
 				return
 			}
-			client.Say(msg.Channel, fmt.Sprintf("Created alias [%s] for [%s]", fields[2], originalCommand)) 
+			comm.ToChat(msg.Channel, fmt.Sprintf("Created alias [%s] for [%s]", fields[2], originalCommand)) 
 			return
 		}
 	}
 
 	if lower == "!commands" {
-		client.Say(msg.Channel, "See available commands at: https://burtbot.app/commands")
+		comm.ToChat(msg.Channel, "See available commands at: https://burtbot.app/commands")
 		return
 	}
 
@@ -173,18 +173,18 @@ func handleMessage(msg twitch.PrivateMessage) {
 	go bbset.HandleMsg(client, msg)
 	if strings.Compare(msg.User.Name, lastMsg.User.Name) == 0 && strings.Compare(msg.Message, lastMessage+" "+lastMessage) == 0 {
 		// break the pyramid with a schlorp
-		client.Say(msg.Channel, "tjportSchlorp1 tjportSchlorp2 tjportSchlorp3")
+		comm.ToChat(msg.Channel, "tjportSchlorp1 tjportSchlorp2 tjportSchlorp3")
 	}
 	lower = strings.ToLower(msg.Message)
 	if strings.Contains(lower, "schlorp") {
 		if !schlorpLock {
 			schlorpLock = true
 			go unlockSchlorp()
-			client.Say(msg.Channel, "tjportSchlorp1 tjportSchlorp2 tjportSchlorp3")
+			comm.ToChat(msg.Channel, "tjportSchlorp1 tjportSchlorp2 tjportSchlorp3")
 		}
 	}
 	if strings.Contains(lower, "one time") {
-		client.Say(msg.Channel, "ONE TIME!")
+		comm.ToChat(msg.Channel, "ONE TIME!")
 	}
 	if count := strings.Count(lower, "quack"); count > 0 {
 		comm.ToOverlay(fmt.Sprintf("quack %d", count))

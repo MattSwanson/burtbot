@@ -53,12 +53,12 @@ func (j *Joke) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		}
 		// start
 		if args[2] == "start" && !j.jokeMode {
-			client.Say(msg.Channel, "Initiating joke mode - prepare for copious amounts of laughter.")
+			comm.ToChat(msg.Channel, "Initiating joke mode - prepare for copious amounts of laughter.")
 			j.JokeMode(client, msg)
 		}
 		// stop
 		if args[2] == "stop" && j.jokeMode {
-			client.Say(msg.Channel, "Ending joke mode - try to stop laughing now.")
+			comm.ToChat(msg.Channel, "Ending joke mode - try to stop laughing now.")
 			j.jokeModeStop <- true
 		}
 		return
@@ -66,7 +66,7 @@ func (j *Joke) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 
 	if args[1] == "overload" {
 		if !canOverload {
-			client.Say(msg.Channel, "I'm all out of jokes... for a little while.")
+			comm.ToChat(msg.Channel, "I'm all out of jokes... for a little while.")
 			return
 		}
 		canOverload = false
@@ -93,7 +93,7 @@ func (j *Joke) TellJoke(client *twitch.Client, msg twitch.PrivateMessage, voiceO
 	// Fetch a joke from icanhazdadjoke api
 	req, err := http.NewRequest("GET", "https://icanhazdadjoke.com", nil)
 	if err != nil {
-		client.Say(msg.Channel, "Sorry, couldn't connect to joke dispensory")
+		comm.ToChat(msg.Channel, "Sorry, couldn't connect to joke dispensory")
 		log.Println("Couldn't access joke api: ", err.Error())
 		return
 	}
@@ -101,14 +101,14 @@ func (j *Joke) TellJoke(client *twitch.Client, msg twitch.PrivateMessage, voiceO
 	resp, err := http.DefaultClient.Do(req)
 	//resp, err := http.Get("https://icanhazdadjoke.com/")
 	if err != nil {
-		client.Say(msg.Channel, "Sorry, couldn't connect to joke dispensory")
+		comm.ToChat(msg.Channel, "Sorry, couldn't connect to joke dispensory")
 		log.Println("Couldn't access joke api: ", err.Error())
 		return
 	}
 	r := apiResponse{}
 	err = json.NewDecoder(resp.Body).Decode(&r)
 	if err != nil {
-		client.Say(msg.Channel, "I dropped the joke on the way back from the store, sorry.")
+		comm.ToChat(msg.Channel, "I dropped the joke on the way back from the store, sorry.")
 		log.Println(err.Error())
 		return
 	}
@@ -122,7 +122,7 @@ func (j *Joke) TellJoke(client *twitch.Client, msg twitch.PrivateMessage, voiceO
 	}
 	jokes := strings.Split(r.Joke, "\n")
 	for _, joke := range jokes {
-		client.Say(msg.Channel, joke)
+		comm.ToChat(msg.Channel, joke)
 	}
 
 }

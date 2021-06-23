@@ -57,13 +57,13 @@ func (l *Lights) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		case "blue":
 			color = blue
 		default:
-			client.Say(msg.Channel, "I only know red, green and blue right now...")
+			comm.ToChat(msg.Channel, "I only know red, green and blue right now...")
 			lightLock = false
 			return
 		}
 	}
 	if color > 65535 || color < 0 {
-		client.Say(msg.Channel, "Invalid color value soz")
+		comm.ToChat(msg.Channel, "Invalid color value soz")
 		lightLock = false
 		return
 	}

@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
@@ -52,14 +53,14 @@ func (bc *BurtCoin) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 			return
 		}
 		if bc.Give(msg.User, args[2], float64(n)) {
-			client.Say(msg.Channel, fmt.Sprintf("@%s gave %d burtcoin to %s. How nice.", msg.User.DisplayName, n, args[2]))
+			comm.ToChat(msg.Channel, fmt.Sprintf("@%s gave %d burtcoin to %s. How nice.", msg.User.DisplayName, n, args[2]))
 		} else {
-			client.Say(msg.Channel, fmt.Sprintf("@%s you don't have enough burtcoin to give %d.", msg.User.DisplayName, n))
+			comm.ToChat(msg.Channel, fmt.Sprintf("@%s you don't have enough burtcoin to give %d.", msg.User.DisplayName, n))
 		}
 	}
 
 	if args[1] == "balance" {
-		client.Say(msg.Channel, fmt.Sprintf("@%s you have %f burtcoin.", msg.User.DisplayName, bc.Balance(msg.User)))
+		comm.ToChat(msg.Channel, fmt.Sprintf("@%s you have %f burtcoin.", msg.User.DisplayName, bc.Balance(msg.User)))
 		return
 	}
 
@@ -69,15 +70,15 @@ func (bc *BurtCoin) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 		}
 		if args[2] == "start" {
 			if bc.Mine(msg.User) {
-				client.Say(msg.Channel, fmt.Sprintf("@%s has started mining burtcoin. What a waste.", msg.User.DisplayName))
+				comm.ToChat(msg.Channel, fmt.Sprintf("@%s has started mining burtcoin. What a waste.", msg.User.DisplayName))
 			} else {
-				client.Say(msg.Channel, fmt.Sprintf("@%s, you can't start another miner.", msg.User.DisplayName))
+				comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you can't start another miner.", msg.User.DisplayName))
 			}
 			return
 		}
 		if args[2] == "stop" {
 			if bc.StopMining(msg.User.Name) {
-				client.Say(msg.Channel, fmt.Sprintf("@%s has stopped mining burtcoin.", msg.User.DisplayName))
+				comm.ToChat(msg.Channel, fmt.Sprintf("@%s has stopped mining burtcoin.", msg.User.DisplayName))
 			}
 			return
 		}
@@ -88,7 +89,7 @@ func (bc *BurtCoin) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 func (bc *BurtCoin) OnUserPart(client *twitch.Client, msg twitch.UserPartMessage) {
 	// log.Println(fmt.Sprintf(`%s has left the channel, close down their miner if app.`, msg.User))
 	if bc.StopMining(msg.User) {
-		client.Say(msg.Channel, fmt.Sprintf("%s left - turning off their miner to save my energies... or something.", msg.User))
+		comm.ToChat(msg.Channel, fmt.Sprintf("%s left - turning off their miner to save my energies... or something.", msg.User))
 	}
 }
 

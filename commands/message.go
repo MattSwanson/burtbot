@@ -20,7 +20,7 @@ func (m *Msg) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 	// }
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
 	if len(args) < 2 {
-		client.Say(msg.Channel, "Not enough stuff for stuff")
+		comm.ToChat(msg.Channel, "Not enough stuff for stuff")
 		return
 	}
 	newMsg := strings.Join(args[1:], " ")

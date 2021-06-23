@@ -99,13 +99,7 @@ func (b *Bopometer) Run(client *twitch.Client, msg twitch.PrivateMessage) {
 				b.isBopping = false
 			}(c)
 		} else {
-			// already bopping add to the bopping until bopping is complete. bopping
-			// if _, ok := b.hasBopped[msg.User.Name]; !ok {
-			// 	b.hasBopped[msg.User.Name] = true
 			b.currentTrack.Rating++
-			// } else {
-			// 	client.Say(msg.Channel, fmt.Sprintf("@%s, you've already bopped... stop it.", msg.User.DisplayName))
-			// }
 		}
 		return
 	}
