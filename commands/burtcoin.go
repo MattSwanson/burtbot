@@ -19,11 +19,17 @@ const (
 	miningAmount = .005 // per tick
 )
 
+var burtCoin *BurtCoin = &BurtCoin{}
+
 type BurtCoin struct {
 	Wallets map[string]float64
 	Mining  map[string]context.CancelFunc
 
 	lock sync.Mutex
+}
+
+func init() {
+	RegisterCommand("burtcoin", burtCoin)
 }
 
 func (bc *BurtCoin) Init() {
@@ -39,6 +45,7 @@ func (bc *BurtCoin) Init() {
 			log.Println("Invalid json in tokens file")
 		}
 	}
+	burtCoin = bc
 	SubscribeUserPart(bc.OnUserPart)
 }
 
@@ -118,6 +125,10 @@ func (bc *BurtCoin) Deduct(user twitch.User, amount float64) bool {
 	return true
 }
 
+func DeductBurtcoin(user twitch.User, amount float64) bool {
+	return burtCoin.Deduct(user, amount)
+}
+
 // Mine
 func (bc *BurtCoin) Mine(user twitch.User) bool {
 	if _, ok := bc.Mining[user.Name]; ok {
@@ -159,6 +170,10 @@ func (bc *BurtCoin) Balance(user twitch.User) float64 {
 	bc.lock.Lock()
 	defer bc.lock.Unlock()
 	return bc.Wallets[user.Name]
+}
+
+func GetBurtcoinBalance(user twitch.User) float64 {
+	return burtCoin.Balance(user)
 }
 
 func (bc *BurtCoin) saveWalletsToFile() {

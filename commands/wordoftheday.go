@@ -12,6 +12,12 @@ type Wod struct{
 	current string
 }
 
+var wod *Wod = &Wod{}
+
+func init() {
+	RegisterCommand("wod", wod)
+}
+
 func (w *Wod) Run(msg twitch.PrivateMessage) {
 
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))

@@ -15,14 +15,18 @@ type Lights struct{}
 
 var lightLock bool = false
 var lightCD int = 5
-
 var bridgeID string = os.Getenv("HUE_BRIDGE_ID")
+var lights *Lights = &Lights{}
 
 const (
 	red   int = 0
 	green int = 25500
 	blue  int = 46920
 )
+
+func init() {
+	RegisterCommand("lights", lights)
+}
 
 func NewLights() *Lights {
 	return &Lights{}

@@ -11,26 +11,29 @@ import (
 )
 
 type Plinko struct {
-	TokenMachine *TokenMachine
 	running      bool
 }
 
+var plinko *Plinko = &Plinko{}
+
+func init() {
+	comm.SubscribeToReply("plinko", plinko.HandleResponse)
+	comm.SubscribeToReply("reset", plinko.Stop)
+	RegisterCommand("plinko", plinko)
+}
+
 func (p *Plinko) Init() {
-	comm.SubscribeToReply("plinko", p.HandleResponse)
-	comm.SubscribeToReply("reset", p.Stop)
+
 }
 
 func (p *Plinko) Run(msg twitch.PrivateMessage) {
-	if p.TokenMachine == nil {
-		p.TokenMachine = GetTokenMachine()
-	}
 	args := strings.Fields(strings.ToLower(msg.Message))
 	if len(args) < 2 {
 		return
 	}
 
 	if args[1] == "drop" && len(args) >= 3 {
-		numTokens := p.TokenMachine.getTokenCount(msg.User)
+		numTokens := GetTokenCount(msg.User)
 		if numTokens <= 0 {
 			comm.ToChat(msg.Channel, fmt.Sprintf("Sorry @%s, you have no tokens. Plinko costs 1 token per drop.", msg.User.DisplayName))
 			return
@@ -39,7 +42,7 @@ func (p *Plinko) Run(msg twitch.PrivateMessage) {
 		if args[2] == "all" && numTokens >= 5 {
 			cost = 5
 		}
-		p.TokenMachine.setTokenCount(msg.User.Name, numTokens-cost)
+		DeductTokens(msg.User.Name, cost)
 		comm.ToOverlay(fmt.Sprintf("plinko drop %s %s %s", args[2], msg.User.DisplayName, msg.User.Color))
 	}
 
@@ -47,7 +50,7 @@ func (p *Plinko) Run(msg twitch.PrivateMessage) {
 
 func (p *Plinko) HandleResponse(args []string) {
 	if n, err := strconv.Atoi(args[3]); err == nil {
-		p.TokenMachine.GrantToken(strings.ToLower(args[2]), n)
+		GrantToken(strings.ToLower(args[2]), n)
 
 		s := ""
 		if n > 0 {

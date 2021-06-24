@@ -20,7 +20,9 @@ const (
 	aliasesFileName = "./aliases.json"
 )
 
-var onPartSubscribers []func(twitch.UserPartMessage)
+var cmdHandler *CmdHandler = &CmdHandler{Commands: make(map[string]Command)}
+var onPartSubscriptions []func(twitch.UserPartMessage)
+var rawMsgSubscriptions []func(twitch.PrivateMessage)
 
 type Command interface {
 	Run(twitch.PrivateMessage)
@@ -39,11 +41,9 @@ type CmdHandler struct {
 // }
 
 func NewCmdHandler(client *twitch.Client) *CmdHandler {
-	return &CmdHandler{
-		Client:     client,
-		Commands:   make(map[string]Command),
-		aliases:	make(map[string]string),
-	}
+	cmdHandler.Client = client
+	cmdHandler.aliases = make(map[string]string)
+	return cmdHandler
 }
 
 func (handler *CmdHandler) RegisterCommand(pattern string, c Command) error {
@@ -55,7 +55,14 @@ func (handler *CmdHandler) RegisterCommand(pattern string, c Command) error {
 	return nil
 }
 
+func RegisterCommand(pattern string, c Command) error {
+	return cmdHandler.RegisterCommand(pattern, c)
+}
+
 func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
+	for _, fn := range rawMsgSubscriptions {
+		fn(msg)
+	}
 	if !strings.HasPrefix(msg.Message, "!") {
 		return
 	}
@@ -74,13 +81,9 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 	}
 }
 
-//TODO Removing OnUserPart from the command interface
-// modules that want notifcations onUserPart will need to subscribe to get notified
-// barely any commands were actually using this, so this is better
 func (handler *CmdHandler) HandlePartMsg(msg twitch.UserPartMessage) {
 	// notify any commands that require it - that a user has parted the channel
-	for _, fn := range onPartSubscribers {
-		fmt.Printf("sending user part msg to %v", fn)
+	for _, fn := range onPartSubscriptions {
 		fn(msg)
 	}
 }
@@ -155,7 +158,14 @@ func (handler *CmdHandler) InjectAliases(message string) string {
 	return strings.Join(fields, " ")
 }
 
+func GetCommandMap() *map[string]Command {
+	return &cmdHandler.Commands
+}
+
 func SubscribeUserPart(f func(twitch.UserPartMessage)) {
-	onPartSubscribers = append(onPartSubscribers, f)
-	fmt.Println(onPartSubscribers)
+	onPartSubscriptions = append(onPartSubscriptions, f)
+}
+
+func SubscribeToRawMsg(f func(twitch.PrivateMessage)) {
+	rawMsgSubscriptions = append(rawMsgSubscriptions, f)
 }

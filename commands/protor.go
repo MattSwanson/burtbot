@@ -7,6 +7,12 @@ import (
 
 type ProtoR struct{}
 
+var protor *ProtoR = &ProtoR{}
+
+func init() {
+	RegisterCommand("protocolr", protor)
+}
+
 func (p *ProtoR) Run(msg twitch.PrivateMessage) {
 	comm.ToChat(msg.Channel, "Check out my game on Youtube! https://youtu.be/dQw4w9WgXcQ")
 }

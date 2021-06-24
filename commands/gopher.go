@@ -9,6 +9,12 @@ import (
 
 type Gopher struct {}
 
+var gopher *Gopher = &Gopher{}
+
+func init() {
+	RegisterCommand("go", gopher)
+}
+
 func (g *Gopher) Init() {
 
 }

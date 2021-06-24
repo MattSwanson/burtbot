@@ -10,6 +10,12 @@ import (
 
 type Msg struct {}
 
+var msg *Msg = &Msg{}
+
+func init() {
+	RegisterCommand("bbmsg", msg)
+}
+
 func (m *Msg) Init() {
 
 }

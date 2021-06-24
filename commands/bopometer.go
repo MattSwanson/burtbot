@@ -16,7 +16,6 @@ import (
 
 // here lies the bopometer...
 type Bopometer struct {
-	Music        *Music
 	ratings      map[string]trackInfo // key is spotify track id
 	currentTrack trackInfo
 	hasBopped    map[string]bool // usernames
@@ -42,19 +41,27 @@ const (
 	bopEndWaringTime = 5  // seconds
 )
 
-func (b *Bopometer) Init() {
-	b.ratings = map[string]trackInfo{}
-	b.hasBopped = map[string]bool{}
+var bopometer *Bopometer = &Bopometer{}
+
+func init() {
+	bopometer.ratings = map[string]trackInfo{}
+	bopometer.hasBopped = map[string]bool{}
 	j, err := os.ReadFile("./ratings.json")
 	if err != nil {
 		log.Println("Couldn't load bopometer ratings info from file")
 	} else {
-		err = json.Unmarshal(j, &b.ratings)
+		err = json.Unmarshal(j, &bopometer.ratings)
 		if err != nil {
 			log.Println("Invalid json in bops file")
 		}
 	}
-	comm.SubscribeToReply("bop", b.Results)
+	comm.SubscribeToReply("bop", bopometer.Results)
+	SubscribeToRawMsg(bopometer.handleRawMessage)
+	RegisterCommand("bop", bopometer)
+}
+
+func (b *Bopometer) Init() {
+
 }
 
 func (b *Bopometer) Run(msg twitch.PrivateMessage) {
@@ -64,7 +71,7 @@ func (b *Bopometer) Run(msg twitch.PrivateMessage) {
 	// users get one !bop
 	// after completion display results and write the current slice to file to persist
 
-	if b.Music.SpotifyClient == nil {
+	if !IsLoggedInToSpotify() {
 		comm.ToChat(msg.Channel, "Not logged into Spotify. Can't user music commands right now. Tell the streamer to log in and not be a dolt.")
 		return
 	}
@@ -74,7 +81,7 @@ func (b *Bopometer) Run(msg twitch.PrivateMessage) {
 	if len(args) == 1 {
 
 		if !b.isBopping {
-			trackID, isPlaying := b.Music.getCurrentTrackID()
+			trackID, isPlaying := GetCurrentTrackID()
 			if !isPlaying {
 				comm.ToChat(msg.Channel, "No track is currently playing.")
 				return
@@ -84,8 +91,8 @@ func (b *Bopometer) Run(msg twitch.PrivateMessage) {
 			b.isBopping = true
 			b.hasBopped[msg.User.Name] = true
 			comm.ToChat(msg.Channel, fmt.Sprintf("BOP BOP BOP @%s has started the bopometer! Spam BOP to bop", msg.User.DisplayName))
-			artists, _ := b.Music.getCurrentTrackArtists()
-			song, _ := b.Music.getCurrentTrackTitle()
+			artists, _ := GetCurrentTrackArtists()
+			song, _ := GetCurrentTrackTitle()
 			b.currentTrack = trackInfo{Name: song, Artists: artists, Rating: 1, ID: trackID}
 			comm.ToOverlay("bop start")
 			c := make(chan int)
@@ -192,5 +199,12 @@ func (b *Bopometer) Help() []string {
 		"!bop will intiaite the bopometer",
 		"spam BOP emotes to raise the bopometer",
 		"Destroy stream quality in the process.",
+	}
+}
+
+func (b *Bopometer) handleRawMessage(msg twitch.PrivateMessage) {
+	if b.isBopping {
+		bops := strings.Count(msg.Message, "BOP")
+		b.AddBops(bops)
 	}
 }

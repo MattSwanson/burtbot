@@ -15,8 +15,15 @@ type Tanks struct {
 	//currentPlayers []twitch.User
 }
 
+var tanks *Tanks = &Tanks{}
+
+func init() {
+	RegisterCommand("tanks", tanks)
+	comm.SubscribeToReply("reset", tanks.Stop)
+}
+
 func (t *Tanks) Init() {
-	comm.SubscribeToReply("reset", t.Stop)
+
 }
 
 func (t *Tanks) Run(msg twitch.PrivateMessage) {

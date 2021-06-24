@@ -17,13 +17,12 @@ import (
 
 const followRewardAmount = 100
 
-var tm *TokenMachine
+var tm *TokenMachine = &TokenMachine{Tokens: make(map[string]int)}
 
 type TokenMachine struct {
 	lastKick            time.Time
 	lastDistract        time.Time
 	attendantDistracted bool
-	BurtCoin            *BurtCoin
 	Tokens              map[string]int
 	persist             bool
 }
@@ -37,6 +36,10 @@ const (
 	distractTime           = 30 // seconds
 	distractCooldown       = 24 // hours
 )
+
+func init() {
+	RegisterCommand("tokenmachine", tm)
+}
 
 func GetTokenMachine() *TokenMachine {
 	return tm
@@ -151,7 +154,7 @@ func (t *TokenMachine) Run(msg twitch.PrivateMessage) {
 			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, right now tokens are %[2]d for one burtcoin. Please buy in multiples of %[2]d.", msg.User.DisplayName, tokenRate))
 			return
 		}
-		bcBalance := t.BurtCoin.Balance(msg.User)
+		bcBalance := GetBurtcoinBalance(msg.User)
 		if bcBalance < 1 {
 			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you don't have any burtcoins with which to buy tokens.", msg.User.Name))
 			return
@@ -162,7 +165,7 @@ func (t *TokenMachine) Run(msg twitch.PrivateMessage) {
 			return
 		}
 
-		if t.BurtCoin.Deduct(msg.User, float64(amount)/float64(tokenRate)) {
+		if DeductBurtcoin(msg.User, float64(amount)/float64(tokenRate)) {
 			t.GrantToken(strings.ToLower(msg.User.Name), amount)
 			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you received %d tokens for %d burtcoin. Thanks!", msg.User.DisplayName, amount, amount/tokenRate))
 		} else {
@@ -220,11 +223,19 @@ func (t *TokenMachine) DeductTokens(username string, number int) bool {
 	return true
 }
 
+func DeductTokens(username string, number int) bool {
+	return tm.DeductTokens(username, number)
+}
+
 func (t *TokenMachine) GrantToken(username string, number int) {
 	t.Tokens[strings.ToLower(username)] += number
 	if t.persist {
 		t.saveTokensToFile()
 	}
+}
+
+func GrantToken(username string, number int) {
+	tm.GrantToken(username, number)
 }
 
 func (t *TokenMachine) setTokenCount(userName string, number int) {
@@ -251,6 +262,10 @@ func (t *TokenMachine) getTokenCount(user twitch.User) int {
 	// No one gets any tokens!!!!
 	return t.Tokens[username]
 }
+
+func GetTokenCount(user twitch.User) int {
+	return tm.getTokenCount(user)
+}	
 
 func (t *TokenMachine) FollowReward(username string) {
 	s := fmt.Sprintf("Thanks for following @%s! Have %d tokens to spend on useless things...", username, followRewardAmount)

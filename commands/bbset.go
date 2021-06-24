@@ -23,6 +23,15 @@ type Bbset struct {
 	persist  bool
 }
 
+var bbset *Bbset = &Bbset{
+	commands: make(map[string]string),
+}
+
+func init() {
+	RegisterCommand("bbset", bbset)
+	SubscribeToRawMsg(bbset.HandleMsg)
+}
+
 func (b *Bbset) Init() {
 	b.commands = make(map[string]string)
 	b.persist = true
@@ -36,6 +45,7 @@ func (b *Bbset) Init() {
 		log.Println("Invalid json in chat commands file")
 		b.persist = false
 	}
+	b.ReservedCommands = GetCommandMap()
 }
 
 // Run will be used to set commands, then commands will be run from a different method

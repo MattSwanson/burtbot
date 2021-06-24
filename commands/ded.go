@@ -21,6 +21,11 @@ type counter struct {
 
 var cooldown int = 15
 var locked = false
+var ded *Ded = &Ded{}
+
+func init() {
+	RegisterCommand("ded", ded)
+}
 
 func (d *Ded) Init() {
 

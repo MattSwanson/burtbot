@@ -13,8 +13,15 @@ type Snake struct {
 	isRunning  bool
 }
 
+var snake *Snake = &Snake{}
+
+func init() {
+	comm.SubscribeToReply("reset", snake.Stop)
+	RegisterCommand("snake", snake)
+}
+
 func (s *Snake) Init() {
-	comm.SubscribeToReply("reset", s.Stop)
+
 }
 
 func (s *Snake) Run(msg twitch.PrivateMessage) {

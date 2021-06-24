@@ -12,6 +12,12 @@ type OffByOneCounter struct {
 	counter int
 }
 
+var obo *OffByOneCounter = &OffByOneCounter{}
+
+func init() {
+	RegisterCommand("offbyone", obo)
+}
+
 func (o *OffByOneCounter) Init() {
 
 }

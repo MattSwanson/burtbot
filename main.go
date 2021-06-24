@@ -15,17 +15,14 @@ import (
 
 var handler *commands.CmdHandler
 var client *twitch.Client
-var bbset commands.Bbset
 var chatMessages []twitch.PrivateMessage
-var triviaManager *commands.Trivia
 
 var lastMessage string
-var lastMsg twitch.PrivateMessage
-
+var lastMsg twitch.PrivateMessage 
+var lastQuacksplosion time.Time
 var schlorpLock = false
 var schlorpCD = 10
 
-var bopometer *commands.Bopometer
 
 func main() {
 
@@ -50,7 +47,8 @@ func main() {
 
 	helix.Init()
 
-	registerCommands()
+	handler = commands.NewCmdHandler(client)
+	handler.LoadAliases()
 	client.Join("burtstanton")
 	comm.AddChatClient(client)
 	StartWebServer(handler)
@@ -61,74 +59,18 @@ func main() {
 	}
 }
 
-func registerCommands() {
-	handler = commands.NewCmdHandler(client)
-
-	burtCoin := commands.BurtCoin{}
-	handler.RegisterCommand("burtcoin", &burtCoin)
-
-	tokenMachine := commands.TokenMachine{BurtCoin: &burtCoin}
-	handler.RegisterCommand("tokenmachine", &tokenMachine)
-
-	//handler.RegisterCommand("nonillion", commands.Nonillion{})
-	handler.RegisterCommand("ded", &commands.Ded{})
-	handler.RegisterCommand("oven", &commands.Oven{Temperature: 65, BakeTemp: 0})
-	handler.RegisterCommand("bbmsg", &commands.Msg{})
-	handler.RegisterCommand("offbyone", &commands.OffByOneCounter{})
-
-	jokes := commands.Joke{}
-	handler.RegisterCommand("joke", &jokes)
-	
-	handler.RegisterCommand("lights", commands.NewLights())
-	handler.RegisterCommand("time", &commands.Tim{})
-	handler.RegisterCommand("sb", commands.NewSuggestionBox())
-
-	musicManager := commands.Music{}
-	handler.RegisterCommand("music", &musicManager)
-
-	bbset = commands.Bbset{ReservedCommands: &handler.Commands}
-	handler.RegisterCommand("bbset", &bbset)
-
-	bop := commands.Bopometer{Music: &musicManager}
-	handler.RegisterCommand("bop", &bop)
-	bopometer = &bop
-
-	handler.RegisterCommand("go", &commands.Gopher{})
-	handler.RegisterCommand("bigmouse", &commands.BigMouse{})
-	handler.RegisterCommand("snake", &commands.Snake{})
-	handler.RegisterCommand("marquee", &commands.Marquee{})
-	handler.RegisterCommand("so", &commands.Shoutout{})
-	handler.RegisterCommand("error", &commands.ErrorBox{})
-	handler.RegisterCommand("plinko", &commands.Plinko{})
-	handler.RegisterCommand("tanks", &commands.Tanks{})
-	handler.RegisterCommand("lo", &commands.LightsOut{})
-
-	triviaManager = commands.NewTrivia()
-	handler.RegisterCommand("trivia", triviaManager)
-	handler.RegisterCommand("wod", &commands.Wod{})
-	handler.RegisterCommand("protocolr", &commands.ProtoR{})
-	handler.RegisterCommand("incomplete", &commands.Incomplete{})
-	bingo := commands.NewBingo(&tokenMachine)
-	handler.RegisterCommand("bingo", bingo)
-	handler.LoadAliases()
-}
-
 func handleMessage(msg twitch.PrivateMessage) {
 
 	showMessageOnConsole(msg)
-		
+	
 	if msg.User.DisplayName == "tundragaminglive" {
 		comm.ToOverlay("miracle")
 	}
+
 	lower := strings.ToLower(msg.Message)
 	if lower == "!help" {
 		handler.HelpAll()
 	}
-	go func(){
-		if triviaManager.AnswerChannel != nil {
-			triviaManager.AnswerChannel <- msg
-		}
-	}()
 	msg.Message = handler.InjectAliases(msg.Message)
 
 	fields := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
@@ -151,10 +93,6 @@ func handleMessage(msg twitch.PrivateMessage) {
 		return
 	}
 
-	if bopometer.GetBopping() {
-		bops := strings.Count(msg.Message, "BOP")
-		bopometer.AddBops(bops)
-	}
 	if lower == "w" {
 		comm.ToOverlay("up")
 	}
@@ -170,7 +108,6 @@ func handleMessage(msg twitch.PrivateMessage) {
 
 
 	go handler.HandleMsg(msg)
-	go bbset.HandleMsg(msg)
 	if strings.Compare(msg.User.Name, lastMsg.User.Name) == 0 && strings.Compare(msg.Message, lastMessage+" "+lastMessage) == 0 {
 		// break the pyramid with a schlorp
 		comm.ToChat(msg.Channel, "tjportSchlorp1 tjportSchlorp2 tjportSchlorp3")
@@ -188,6 +125,12 @@ func handleMessage(msg twitch.PrivateMessage) {
 	}
 	if count := strings.Count(lower, "quack"); count > 0 {
 		comm.ToOverlay(fmt.Sprintf("quack %d", count))
+		if msg.User.DisplayName == "0xffffffff810000000" {
+			if time.Since(lastQuacksplosion).Seconds() > 21600 {
+				comm.ToOverlay("quacksplosion")
+				lastQuacksplosion = time.Now()
+			}
+		}
 	}
 
 	lastMessage = msg.Message

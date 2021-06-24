@@ -27,6 +27,11 @@ var jokeLock bool = false
 var jokeCD int = 5		 // seconds
 var overloadCD int = 600 // seconds
 var canOverload bool = true
+var joke *Joke = &Joke{jokeModeStop: make(chan bool)}
+
+func init() {
+	RegisterCommand("joke", joke)
+}
 
 func (j *Joke) Init() {
 	j.jokeModeStop = make(chan bool)

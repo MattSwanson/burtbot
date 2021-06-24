@@ -20,7 +20,14 @@ type Oven struct {
 type food struct {
 	Name        string
 	BakeTemp    int
-	Coductivity float64 // how quickly the food will cook
+	Conductivity float64 // how quickly the food will cook
+}
+
+var oven *Oven = &Oven{}
+
+func init() {
+	oven.Temperature = 65
+	RegisterCommand("oven", oven)
 }
 
 func (o *Oven) Init() {

@@ -7,6 +7,12 @@ import (
 
 type BigMouse struct {}
 
+var bigMouse *BigMouse = &BigMouse{}
+
+func init() {
+	RegisterCommand("bigmouse", bigMouse)
+}
+
 func (m *BigMouse) Init() {
 
 }

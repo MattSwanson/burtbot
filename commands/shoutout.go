@@ -15,6 +15,12 @@ type Shoutout struct {
 	//customMessages map[string]string // key is username, value is a message to display
 }
 
+var shoutOut *Shoutout = &Shoutout{}
+
+func init() {
+	RegisterCommand("so", shoutOut)
+}
+
 func (s *Shoutout) Init() {
 	rand.Seed(time.Now().UnixNano())
 }

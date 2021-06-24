@@ -13,7 +13,6 @@ import (
 
 type Music struct {
 	SpotifyClient *spotify.Client
-	TokenMachine  *TokenMachine
 }
 
 const skipCost = 5       //tokens
@@ -26,6 +25,11 @@ var spotifyAuth = spotify.NewAuthenticator("https://burtbot.app:8079/spotify_aut
 	spotify.ScopeUserModifyPlaybackState)
 var spotifyAuthCh = make(chan *spotify.Client)
 var spotifyState = "test123"
+var mu *Music = &Music{}
+
+func init() {
+	RegisterCommand("music", mu)
+}
 
 func (m *Music) Init() {
 	go func() {
@@ -33,11 +37,11 @@ func (m *Music) Init() {
 		http.HandleFunc("/spotify_link", getSpotifyLink)
 		go http.ListenAndServeTLS(":8079", "/etc/letsencrypt/live/burtbot.app/fullchain.pem", "/etc/letsencrypt/live/burtbot.app/privkey.pem", nil)
 
-		m.TokenMachine = GetTokenMachine()
 		fmt.Println("Awating Spotify authentication...")
 		m.SpotifyClient = <-spotifyAuthCh
 		fmt.Println("Logged in to Spotify")
 	}()
+	mu = m
 }
 
 func (m *Music) Run(msg twitch.PrivateMessage) {
@@ -97,22 +101,6 @@ func (m *Music) Run(msg twitch.PrivateMessage) {
 		return
 	}
 
-	// if args[1] == "grant" {
-	// 	if !isMod(msg.User) || len(args) < 4 {
-	// 		return
-	// 	}
-	// 	var numberTokens int
-	// 	if n, err := strconv.Atoi(args[3]); err != nil {
-	// 		numberTokens = 1
-	// 	} else {
-	// 		numberTokens = n
-	// 	}
-	// 	// no validation for twitch users here - but we will save and fetch them in all lowercase
-	// 	username := strings.ToLower(args[2])
-	// 	m.TokenMachine.GrantToken(username, numberTokens)
-	// 	return
-	// }
-
 	if args[1] == "request" {
 		if len(args) < 3 {
 			return
@@ -128,7 +116,7 @@ func (m *Music) Run(msg twitch.PrivateMessage) {
 	}
 
 	if args[1] == "skip" {
-		if m.TokenMachine.getTokenCount(msg.User) < skipCost {
+		if GetTokenCount(msg.User) < skipCost {
 			comm.ToChat(msg.Channel, fmt.Sprintf("@%s you don't have enough tokens to skip this song. Deal with it.", msg.User.DisplayName))
 			return
 		}
@@ -140,14 +128,15 @@ func (m *Music) Run(msg twitch.PrivateMessage) {
 			return
 		}
 
-		m.TokenMachine.setTokenCount(msg.User.DisplayName, m.TokenMachine.getTokenCount(msg.User)-skipCost)
+		DeductTokens(msg.User.DisplayName, skipCost)
+		tokensLeft := GetTokenCount(msg.User)
 		plural := ""
-		if m.TokenMachine.getTokenCount(msg.User) > 1 {
+		if tokensLeft > 1 {
 			plural = "s"
 		}
 		comm.ToChat(msg.Channel, fmt.Sprintf("Are you happy @%s? You skipped everyone's favorite song...", msg.User.DisplayName))
-		if m.TokenMachine.getTokenCount(msg.User) > 0 {
-			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, also, you only have %d token%s left", msg.User.DisplayName, m.TokenMachine.getTokenCount(msg.User), plural))
+		if tokensLeft > 0 {
+			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, also, you only have %d token%s left", msg.User.DisplayName, GetTokenCount(msg.User), plural))
 		} else {
 			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, also, you have no tokens left. Sad.", msg.User.DisplayName))
 		}
@@ -156,7 +145,7 @@ func (m *Music) Run(msg twitch.PrivateMessage) {
 	}
 
 	if args[1] == "previous" {
-		if m.TokenMachine.getTokenCount(msg.User) < previousCost {
+		if GetTokenCount(msg.User) < previousCost {
 			comm.ToChat(msg.Channel, fmt.Sprintf("@%s you don't have enough tokens to return to the past.", msg.User.DisplayName))
 			return
 		}
@@ -168,14 +157,15 @@ func (m *Music) Run(msg twitch.PrivateMessage) {
 			return
 		}
 
-		m.TokenMachine.setTokenCount(msg.User.DisplayName, m.TokenMachine.getTokenCount(msg.User)-previousCost)
+		DeductTokens(msg.User.DisplayName, previousCost)
+		tokensLeft := GetTokenCount(msg.User)
 		plural := ""
-		if m.TokenMachine.getTokenCount(msg.User) > 1 {
+		if tokensLeft > 1 {
 			plural = "s"
 		}
 		comm.ToChat(msg.Channel, fmt.Sprintf("Okay @%s, I guess we have to go back to the last song.", msg.User.DisplayName))
-		if m.TokenMachine.getTokenCount(msg.User) > 0 {
-			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, also, you only have %d token%s left", msg.User.DisplayName, m.TokenMachine.getTokenCount(msg.User), plural))
+		if tokensLeft > 0 {
+			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, also, you only have %d token%s left", msg.User.DisplayName, GetTokenCount(msg.User), plural))
 		} else {
 			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, also, you have no tokens left. Sad.", msg.User.DisplayName))
 		}
@@ -191,6 +181,10 @@ func (m *Music) getCurrentTrackTitle() (string, bool) {
 	return cp.Item.Name, true
 }
 
+func GetCurrentTrackTitle() (string, bool) {
+	return mu.getCurrentTrackTitle()
+}
+
 func (m *Music) getCurrentTrackArtists() ([]string, bool) {
 	cp, err := m.SpotifyClient.PlayerCurrentlyPlaying()
 	if err != nil {
@@ -203,6 +197,10 @@ func (m *Music) getCurrentTrackArtists() ([]string, bool) {
 	return artists, true
 }
 
+func GetCurrentTrackArtists() ([]string, bool) {
+	return mu.getCurrentTrackArtists()
+}
+
 func (m *Music) getCurrentTrackID() (string, bool) {
 	cp, err := m.SpotifyClient.PlayerCurrentlyPlaying()
 	if err != nil {
@@ -211,9 +209,13 @@ func (m *Music) getCurrentTrackID() (string, bool) {
 	return string(cp.Item.ID.String()), true
 }
 
+func GetCurrentTrackID() (string, bool) {
+	return mu.getCurrentTrackID()
+}
+
 // Put in a request for the music player from the given user for the given song link
 func (m Music) request(user twitch.User, song spotify.ID) (bool, string) {
-	numTokens := m.TokenMachine.getTokenCount(user)
+	numTokens := GetTokenCount(user)
 	if numTokens <= 0 {
 		return false, fmt.Sprintf("@%s you need a token to make a request. Get tokens from the token machine.", user.Name)
 	}
@@ -223,7 +225,7 @@ func (m Music) request(user twitch.User, song spotify.ID) (bool, string) {
 		return false, "There was an error queing the song - may be an invalid track id"
 	}
 
-	m.TokenMachine.setTokenCount(user.DisplayName, numTokens-1)
+	DeductTokens(user.DisplayName, 1)
 
 	trackInfo, err := m.SpotifyClient.GetTrack(song)
 	if err != nil {
@@ -277,4 +279,8 @@ func (m Music) Help() []string {
 		fmt.Sprintf("!music skip to skip the current track for %d tokens", skipCost),
 		fmt.Sprintf("!music previous to replay the previous song for %d tokens", previousCost),
 	}
+}
+
+func IsLoggedInToSpotify() bool {
+	return mu.SpotifyClient != nil 
 }

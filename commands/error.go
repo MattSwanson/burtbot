@@ -6,6 +6,11 @@ import (
 )
 
 type ErrorBox struct {}
+var errorBox *ErrorBox = &ErrorBox{}
+
+func init() {
+	RegisterCommand("error", errorBox)
+}
 
 func (e ErrorBox) Init() {
 

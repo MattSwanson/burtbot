@@ -62,13 +62,22 @@ type Trivia struct {
 	AnswerChannel chan twitch.PrivateMessage
 }
 
+var trivia *Trivia = &Trivia{
+	players: make(map[string]*triviaPlayer),
+	AnswerChannel: make(chan twitch.PrivateMessage),
+	questions: []question{},
+}
+
+func init() {
+	SubscribeToRawMsg(trivia.handleRawMessage)
+	RegisterCommand("trivia", trivia)
+}
+
 func NewTrivia() *Trivia {
-	return &Trivia{
-		players: map[string]*triviaPlayer{},
-		roundNumber: 0,
-		questions: []question{},
-		AnswerChannel: make(chan twitch.PrivateMessage),
-	}
+	return trivia
+}
+
+func (t *Trivia) Init() {
 }
 
 func (t *Trivia) Run(msg twitch.PrivateMessage) {
@@ -117,10 +126,6 @@ func (t *Trivia) Run(msg twitch.PrivateMessage) {
 		triviaCancel = nil
 	}
 	// reset
-}
-
-func (t *Trivia) Init() {
-
 }
 
 func (t *Trivia) Help() []string {
@@ -200,6 +205,14 @@ func (t *Trivia) Reset() {
 	t.roundNumber = 0
 	t.players = map[string]*triviaPlayer{}
 	t.questions = []question{}
+}
+
+func (t *Trivia) handleRawMessage(msg twitch.PrivateMessage) {
+	go func(){
+		if t.AnswerChannel != nil {
+			t.AnswerChannel <- msg
+		}
+	}()	
 }
 
 func getCategories() ([]category, error) {

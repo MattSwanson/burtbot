@@ -10,6 +10,12 @@ import (
 
 type Tim struct{}
 
+var tim *Tim = &Tim{}
+
+func init() {
+	RegisterCommand("time", tim)
+}
+
 func (t *Tim) Init() {
 
 }

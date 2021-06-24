@@ -12,6 +12,12 @@ type Incomplete struct {
 	count int
 }
 
+var incomplete *Incomplete = &Incomplete{}
+
+func init() {
+	RegisterCommand("incomplete", incomplete)
+}
+
 func (i *Incomplete) Run(msg twitch.PrivateMessage) {
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
 	if len(args) <= 1 {

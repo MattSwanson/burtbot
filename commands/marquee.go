@@ -17,6 +17,12 @@ type MarqueeMsg struct {
 	Emotes     string `json:"emotes"`
 }
 
+var marquee *Marquee = &Marquee{}
+
+func init() {
+	RegisterCommand("marquee", marquee)
+}
+
 func (n *Marquee) Init() {
 
 }

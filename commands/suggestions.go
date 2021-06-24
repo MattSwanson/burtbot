@@ -19,19 +19,23 @@ type SuggestionBox struct {
 	Suggestions []db.Suggestion
 }
 
-func NewSuggestionBox() *SuggestionBox {
-	suggestions := []db.Suggestion{}
+var suggestionBox *SuggestionBox = &SuggestionBox{}
+
+func init() {
+	suggestionBox.Suggestions = []db.Suggestion{}
 	j, err := os.ReadFile("./suggestions.json")
 	if err != nil {
 		log.Println("Couldn't loat suggestions from file")
 	}
-	err = json.Unmarshal(j, &suggestions)
+	err = json.Unmarshal(j, &suggestionBox.Suggestions)
 	if err != nil {
 		log.Println("Invalid json in suggestions file")
 	}
-	return &SuggestionBox{
-		Suggestions: suggestions,
-	}
+	RegisterCommand("sb", suggestionBox)
+}
+
+func NewSuggestionBox() *SuggestionBox {
+	return suggestionBox
 }
 
 func (sb *SuggestionBox) Init() {

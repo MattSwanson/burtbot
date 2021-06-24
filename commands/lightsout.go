@@ -11,6 +11,12 @@ import (
 
 type LightsOut struct {}
 
+var lightsOut *LightsOut = &LightsOut{}
+
+func init() {
+	RegisterCommand("lo", lightsOut)
+}
+
 func (l *LightsOut) Run(msg twitch.PrivateMessage) {
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
 	if len(args) < 2 {

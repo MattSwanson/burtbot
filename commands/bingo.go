@@ -22,11 +22,16 @@ const (
 	waitTime = 30 // Time to wait before a round begins in seconds
 )
 
-var currentGame *Bingo
+var currentGame *Bingo = &Bingo{
+	hopper: []ball{},
+	players: make(map[string]player),
+}
 var tpl *template.Template
 
 func init() {
+	currentGame.drawnNumbers = btree.New(2)
 	tpl = template.Must(template.ParseFiles("./templates/bingo.gohtml"))
+	RegisterCommand("bingo", currentGame)
 }
 
 type Bingo struct {
@@ -35,7 +40,6 @@ type Bingo struct {
 	players          map[string]player
 	running          bool
 	drawCancelFunc   context.CancelFunc
-	tokenMachine	 *TokenMachine
 }
 
 type player struct {
@@ -66,7 +70,7 @@ func (b *Bingo) Run(msg twitch.PrivateMessage) {
 				comm.ToChat(msg.Channel, fmt.Sprintf("@%s has Bingo! They win %d tokens!", msg.User.DisplayName, numTokens))
 				comm.ToOverlay(fmt.Sprintf("bingo winner %s %d", msg.User.DisplayName, numTokens))
 				// alot tokens to winrar
-				b.tokenMachine.GrantToken(msg.User.DisplayName, numTokens)
+				GrantToken(msg.User.DisplayName, numTokens)
 				b.drawCancelFunc()
 				b.running = false
 				b.Start(msg.Channel)
@@ -91,14 +95,14 @@ func (b *Bingo) Run(msg twitch.PrivateMessage) {
 		}
 
 		// check to see if they have enough tokens
-		if !b.tokenMachine.DeductTokens(msg.User.DisplayName, cardCost) {
+		if !DeductTokens(msg.User.DisplayName, cardCost) {
 			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, bingo cards cost %d tokens. You have only %d.", 
-				msg.User.DisplayName, cardCost, b.tokenMachine.getTokenCount(msg.User)))
+				msg.User.DisplayName, cardCost, GetTokenCount(msg.User)))
 			return
 		}
 		url, err := b.userJoined(msg.User.DisplayName)
 		if err != nil {
-			b.tokenMachine.GrantToken(msg.User.DisplayName, cardCost)
+			GrantToken(msg.User.DisplayName, cardCost)
 			comm.ToChat(msg.Channel, fmt.Sprintf("Sorry @%s, couldn't get you resgistered. Try again later. Your tokens have been refunded.", msg.User.DisplayName))
 			return
 		}
@@ -114,16 +118,9 @@ func (b *Bingo) Run(msg twitch.PrivateMessage) {
 
 }
 
-func NewBingo(tokenMachine *TokenMachine) *Bingo {
-	b := Bingo{
-		hopper:           []ball{1, 2, 3},
-		drawnNumbers:     btree.New(2),
-		players:          make(map[string]player),
-		running:          false,
-		tokenMachine: tokenMachine,
-	}
-	currentGame = &b
-	return &b
+func NewBingo() *Bingo {
+	currentGame.drawnNumbers = btree.New(2)
+	return currentGame
 }
 
 func (b *Bingo) Init() {
