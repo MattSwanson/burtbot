@@ -146,6 +146,7 @@ func handleUserPart(msg twitch.UserPartMessage) {
 
 func handleUserJoin(msg twitch.UserJoinMessage) {
 	//log.Printf(`%s has joined the channel.`, msg.User)
+	go handler.HandleJoinMsg(msg)
 }
 
 func unlockSchlorp() {

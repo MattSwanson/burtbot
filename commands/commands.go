@@ -22,6 +22,7 @@ const (
 
 var cmdHandler *CmdHandler = &CmdHandler{Commands: make(map[string]Command)}
 var onPartSubscriptions []func(twitch.UserPartMessage)
+var onJoinSubscriptions []func(twitch.UserJoinMessage)
 var rawMsgSubscriptions []func(twitch.PrivateMessage)
 
 type Command interface {
@@ -84,6 +85,12 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 func (handler *CmdHandler) HandlePartMsg(msg twitch.UserPartMessage) {
 	// notify any commands that require it - that a user has parted the channel
 	for _, fn := range onPartSubscriptions {
+		fn(msg)
+	}
+}
+
+func (handler *CmdHandler) HandleJoinMsg(msg twitch.UserJoinMessage) {
+	for _, fn := range onJoinSubscriptions {
 		fn(msg)
 	}
 }
@@ -164,6 +171,10 @@ func GetCommandMap() *map[string]Command {
 
 func SubscribeUserPart(f func(twitch.UserPartMessage)) {
 	onPartSubscriptions = append(onPartSubscriptions, f)
+}
+
+func SubscribeUserJoin(f func(twitch.UserJoinMessage)) {
+	onJoinSubscriptions = append(onJoinSubscriptions, f)
 }
 
 func SubscribeToRawMsg(f func(twitch.PrivateMessage)) {

@@ -47,6 +47,7 @@ func (bc *BurtCoin) Init() {
 	}
 	burtCoin = bc
 	SubscribeUserPart(bc.OnUserPart)
+	SubscribeUserJoin(bc.OnUserJoin)
 }
 
 func (bc *BurtCoin) Run(msg twitch.PrivateMessage) {
@@ -77,7 +78,7 @@ func (bc *BurtCoin) Run(msg twitch.PrivateMessage) {
 			return
 		}
 		if args[2] == "start" {
-			if bc.Mine(msg.User) {
+			if bc.Mine(msg.User.Name) {
 				comm.ToChat(msg.Channel, fmt.Sprintf("@%s has started mining burtcoin. What a waste.", msg.User.DisplayName))
 			} else {
 				comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you can't start another miner.", msg.User.DisplayName))
@@ -97,8 +98,13 @@ func (bc *BurtCoin) Run(msg twitch.PrivateMessage) {
 func (bc *BurtCoin) OnUserPart(msg twitch.UserPartMessage) {
 	// log.Println(fmt.Sprintf(`%s has left the channel, close down their miner if app.`, msg.User))
 	if bc.StopMining(msg.User) {
-		comm.ToChat(msg.Channel, fmt.Sprintf("%s left - turning off their miner to save my energies... or something.", msg.User))
+		// comm.ToChat(msg.Channel, fmt.Sprintf("%s left - turning off their miner to save my energies... or something.", msg.User))
 	}
+}
+
+func (bc *BurtCoin) OnUserJoin(msg twitch.UserJoinMessage) {
+	// start a miner for the user joining - silently
+	bc.Mine(msg.User)
 }
 
 // Give
@@ -130,8 +136,8 @@ func DeductBurtcoin(user twitch.User, amount float64) bool {
 }
 
 // Mine
-func (bc *BurtCoin) Mine(user twitch.User) bool {
-	if _, ok := bc.Mining[user.Name]; ok {
+func (bc *BurtCoin) Mine(username string) bool {
+	if _, ok := bc.Mining[username]; ok {
 		return false
 	}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -144,13 +150,13 @@ func (bc *BurtCoin) Mine(user twitch.User) bool {
 				return
 			case <-ticker.C:
 				bc.lock.Lock()
-				bc.Wallets[user.Name] += miningAmount
+				bc.Wallets[username] += miningAmount
 				bc.lock.Unlock()
 				bc.saveWalletsToFile()
 			}
 		}
 	}(ctx)
-	bc.Mining[user.Name] = cancel
+	bc.Mining[username] = cancel
 	return true
 }
 
