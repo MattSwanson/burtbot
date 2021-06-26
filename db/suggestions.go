@@ -3,7 +3,10 @@ package db
 import (
 	"context"
 	"time"
+	"sync"
 )
+
+var suggestionLock sync.Mutex = sync.Mutex{}
 
 type Suggestion struct {
 	ID		 int
@@ -14,7 +17,7 @@ type Suggestion struct {
 	Complete bool
 }
 
-func AddSuggestion(s Suggestion) error {
+func AddSuggestion(s Suggestion) (int, error) {
 
 	// check to see if this twitch user is present
 	// in the users table
@@ -22,16 +25,33 @@ func AddSuggestion(s Suggestion) error {
 	if u.TwitchID == 0 {
 		err := AddUser(User{s.UserID, s.Username})
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}	
+	suggestionLock.Lock()
+	defer suggestionLock.Unlock()
 	_, err := DbPool.Exec(context.Background(),
 	`INSERT INTO suggestions (suggestion, user_id, submitted_on)
 	 VALUES ($1, $2, $3)`, s.Text, s.UserID, s.Date)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	return nil
+	row, err := DbPool.Query(context.Background(),
+		`SELECT ID FROM suggestions
+		 ORDER BY ID desc
+		 LIMIT 1`)
+	if err != nil {
+		return 0, err 
+	}
+	defer row.Close()
+	id := 0
+	for row.Next() {
+		err = row.Scan(&id)
+		if err != nil {
+			return id, err
+		}
+	}
+	return id, nil
 }
 
 func GetSuggestions() ([]Suggestion, error) {
@@ -46,7 +66,8 @@ func GetSuggestions() ([]Suggestion, error) {
 		  suggestions.complete
 		 FROM suggestions
 		 JOIN users ON users.twitch_id = suggestions.user_id
-		`)
+		 ORDER BY suggestions.id
+		 `)
 	if err != nil {
 		return suggestions, err
 	}
