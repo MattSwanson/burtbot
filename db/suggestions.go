@@ -6,10 +6,12 @@ import (
 )
 
 type Suggestion struct {
+	ID		 int
 	Username string
 	UserID	 int
 	Date     time.Time
 	Text     string
+	Complete bool
 }
 
 func AddSuggestion(s Suggestion) error {
@@ -35,11 +37,13 @@ func AddSuggestion(s Suggestion) error {
 func GetSuggestions() ([]Suggestion, error) {
 	suggestions := []Suggestion{}
 	rows, err := DbPool.Query(context.Background(), 
-		`SELECT 
+		`SELECT
+		  suggestions.id,
 		  suggestions.user_id,
 		  users.display_name,
 		  suggestions.suggestion,
-		  suggestions.submitted_on
+		  suggestions.submitted_on,
+		  suggestions.complete
 		 FROM suggestions
 		 JOIN users ON users.twitch_id = suggestions.user_id
 		`)
@@ -49,7 +53,7 @@ func GetSuggestions() ([]Suggestion, error) {
 	defer rows.Close()
 	for rows.Next() {
 		s := Suggestion{}
-		err := rows.Scan(&s.UserID, &s.Username, &s.Text, &s.Date)
+		err := rows.Scan(&s.ID, &s.UserID, &s.Username, &s.Text, &s.Date, &s.Complete)
 		if err != nil {
 			return []Suggestion{}, err
 		}
@@ -66,5 +70,14 @@ func DeleteSuggestion(id int) error {
 	`DELETE FROM suggestions 
 	 WHERE id = $1`,
 	 id)
+	return err
+}
+
+func SetSuggestionCompletion(id int, b bool) error {
+	_, err := DbPool.Exec(context.Background(),
+	`UPDATE suggestions
+	 SET complete = $1
+	 WHERE id = $2`,
+	b, id)
 	return err
 }
