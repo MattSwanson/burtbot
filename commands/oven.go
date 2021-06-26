@@ -30,7 +30,7 @@ func init() {
 	RegisterCommand("oven", oven)
 }
 
-func (o *Oven) Init() {
+func (o *Oven) PostInit() {
 
 }
 

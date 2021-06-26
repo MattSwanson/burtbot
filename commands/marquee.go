@@ -23,7 +23,7 @@ func init() {
 	RegisterCommand("marquee", marquee)
 }
 
-func (n *Marquee) Init() {
+func (n *Marquee) PostInit() {
 
 }
 

@@ -36,7 +36,7 @@ func (w *Wod) Run(msg twitch.PrivateMessage) {
 	}
 }
 
-func (w *Wod) Init() {
+func (w *Wod) PostInit() {
 
 }
 

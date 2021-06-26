@@ -77,7 +77,7 @@ func NewTrivia() *Trivia {
 	return trivia
 }
 
-func (t *Trivia) Init() {
+func (t *Trivia) PostInit() {
 }
 
 func (t *Trivia) Run(msg twitch.PrivateMessage) {

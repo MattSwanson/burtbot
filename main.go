@@ -48,6 +48,7 @@ func main() {
 	helix.Init()
 
 	handler = commands.NewCmdHandler(client)
+	handler.PostInit()
 	handler.LoadAliases()
 	client.Join("burtstanton")
 	comm.AddChatClient(client)

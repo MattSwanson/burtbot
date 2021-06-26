@@ -12,7 +12,7 @@ func init() {
 	RegisterCommand("error", errorBox)
 }
 
-func (e ErrorBox) Init() {
+func (e ErrorBox) PostInit() {
 
 }
 

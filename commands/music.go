@@ -31,7 +31,7 @@ func init() {
 	RegisterCommand("music", mu)
 }
 
-func (m *Music) Init() {
+func (m *Music) PostInit() {
 	go func() {
 		http.HandleFunc("/spotify_authcb", completeAuth)
 		http.HandleFunc("/spotify_link", getSpotifyLink)

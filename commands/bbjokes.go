@@ -33,7 +33,7 @@ func init() {
 	RegisterCommand("joke", joke)
 }
 
-func (j *Joke) Init() {
+func (j *Joke) PostInit() {
 	j.jokeModeStop = make(chan bool)
 	j.jokeMode = false
 }

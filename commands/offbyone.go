@@ -18,7 +18,7 @@ func init() {
 	RegisterCommand("offbyone", obo)
 }
 
-func (o *OffByOneCounter) Init() {
+func (o *OffByOneCounter) PostInit() {
 
 }
 

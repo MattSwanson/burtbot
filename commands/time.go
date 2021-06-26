@@ -16,7 +16,7 @@ func init() {
 	RegisterCommand("time", tim)
 }
 
-func (t *Tim) Init() {
+func (t *Tim) PostInit() {
 
 }
 

@@ -15,7 +15,7 @@ func init() {
 	RegisterCommand("go", gopher)
 }
 
-func (g *Gopher) Init() {
+func (g *Gopher) PostInit() {
 
 }
 

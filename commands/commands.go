@@ -27,7 +27,7 @@ var rawMsgSubscriptions []func(twitch.PrivateMessage)
 
 type Command interface {
 	Run(twitch.PrivateMessage)
-	Init()
+	PostInit()
 	Help() []string
 }
 
@@ -51,13 +51,19 @@ func (handler *CmdHandler) RegisterCommand(pattern string, c Command) error {
 	if _, ok := handler.Commands[pattern]; ok {
 		return errors.New("Command already registered with that pattern")
 	}
-	c.Init()
+	// c.Init()
 	handler.Commands[pattern] = c
 	return nil
 }
 
 func RegisterCommand(pattern string, c Command) error {
 	return cmdHandler.RegisterCommand(pattern, c)
+}
+
+func (handler *CmdHandler) PostInit() {
+	for _, c := range handler.Commands {
+		c.PostInit()		
+	}
 }
 
 func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {

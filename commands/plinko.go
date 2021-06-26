@@ -22,7 +22,7 @@ func init() {
 	RegisterCommand("plinko", plinko)
 }
 
-func (p *Plinko) Init() {
+func (p *Plinko) PostInit() {
 
 }
 

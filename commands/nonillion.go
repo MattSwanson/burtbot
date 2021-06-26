@@ -8,7 +8,7 @@ import (
 type Nonillion struct {
 }
 
-func (n Nonillion) Init() {
+func (n Nonillion) PostInit() {
 
 }
 

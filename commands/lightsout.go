@@ -31,7 +31,7 @@ func (l *LightsOut) Run(msg twitch.PrivateMessage) {
 	}
 }
 
-func (l *LightsOut) Init() {
+func (l *LightsOut) PostInit() {
 
 }
 

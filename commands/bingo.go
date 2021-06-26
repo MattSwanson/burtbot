@@ -123,7 +123,7 @@ func NewBingo() *Bingo {
 	return currentGame
 }
 
-func (b *Bingo) Init() {
+func (b *Bingo) PostInit() {
 
 }
 

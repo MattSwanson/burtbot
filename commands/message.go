@@ -16,7 +16,7 @@ func init() {
 	RegisterCommand("bbmsg", msg)
 }
 
-func (m *Msg) Init() {
+func (m *Msg) PostInit() {
 
 }
 

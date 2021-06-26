@@ -32,7 +32,7 @@ func NewLights() *Lights {
 	return &Lights{}
 }
 
-func (l *Lights) Init() {
+func (l *Lights) PostInit() {
 
 }
 

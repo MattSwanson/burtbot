@@ -30,7 +30,7 @@ func (i *Incomplete) Run(msg twitch.PrivateMessage) {
 	}
 }
 
-func (i *Incomplete) Init() {
+func (i *Incomplete) PostInit() {
 
 }
 

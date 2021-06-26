@@ -32,7 +32,7 @@ func init() {
 	RegisterCommand("burtcoin", burtCoin)
 }
 
-func (bc *BurtCoin) Init() {
+func (bc *BurtCoin) PostInit() {
 	// burtcoin init
 	bc.Wallets = make(map[string]float64)
 	bc.Mining = make(map[string]context.CancelFunc)

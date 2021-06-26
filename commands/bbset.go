@@ -32,7 +32,7 @@ func init() {
 	SubscribeToRawMsg(bbset.HandleMsg)
 }
 
-func (b *Bbset) Init() {
+func (b *Bbset) PostInit() {
 	b.commands = make(map[string]string)
 	b.persist = true
 	j, err := os.ReadFile("./commands.json")

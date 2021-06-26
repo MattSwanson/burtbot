@@ -22,7 +22,7 @@ func init() {
 	comm.SubscribeToReply("reset", tanks.Stop)
 }
 
-func (t *Tanks) Init() {
+func (t *Tanks) PostInit() {
 
 }
 

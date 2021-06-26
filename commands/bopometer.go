@@ -60,7 +60,7 @@ func init() {
 	RegisterCommand("bop", bopometer)
 }
 
-func (b *Bopometer) Init() {
+func (b *Bopometer) PostInit() {
 
 }
 

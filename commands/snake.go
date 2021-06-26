@@ -20,7 +20,7 @@ func init() {
 	RegisterCommand("snake", snake)
 }
 
-func (s *Snake) Init() {
+func (s *Snake) PostInit() {
 
 }
 

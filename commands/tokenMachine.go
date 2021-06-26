@@ -38,6 +38,21 @@ const (
 )
 
 func init() {
+	rand.Seed(time.Now().Unix())
+	// tokens init
+	tm.Tokens = make(map[string]int)
+	tm.persist = true
+	j, err := os.ReadFile("./tokens.json")
+	if err != nil {
+		log.Println("Couldn't load token info from file")
+		tm.persist = false
+	} else {
+		err = json.Unmarshal(j, &tm.Tokens)
+		if err != nil {
+			log.Println("Invalid json in tokens file")
+			tm.persist = false
+		}
+	}
 	RegisterCommand("tokenmachine", tm)
 }
 
@@ -45,26 +60,8 @@ func GetTokenMachine() *TokenMachine {
 	return tm
 }
 
-func (t *TokenMachine) Init() {
-	rand.Seed(time.Now().Unix())
-	// tokens init
-	t.Tokens = make(map[string]int)
-	t.persist = true
-	j, err := os.ReadFile("./tokens.json")
-	if err != nil {
-		log.Println("Couldn't load token info from file")
-		t.persist = false
-	} else {
-		err = json.Unmarshal(j, &t.Tokens)
-		if err != nil {
-			log.Println("Invalid json in tokens file")
-			t.persist = false
-		}
-	}
-
+func (t *TokenMachine) PostInit() {
 	helix.SubscribeToFollowEvent(t.FollowReward)
-
-	tm = t
 }
 
 func (t *TokenMachine) Run(msg twitch.PrivateMessage) {

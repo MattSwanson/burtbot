@@ -27,7 +27,7 @@ func init() {
 	RegisterCommand("ded", ded)
 }
 
-func (d *Ded) Init() {
+func (d *Ded) PostInit() {
 
 }
 

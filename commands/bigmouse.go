@@ -13,7 +13,7 @@ func init() {
 	RegisterCommand("bigmouse", bigMouse)
 }
 
-func (m *BigMouse) Init() {
+func (m *BigMouse) PostInit() {
 
 }
 

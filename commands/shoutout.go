@@ -21,7 +21,7 @@ func init() {
 	RegisterCommand("so", shoutOut)
 }
 
-func (s *Shoutout) Init() {
+func (s *Shoutout) PostInit() {
 	rand.Seed(time.Now().UnixNano())
 }
 
