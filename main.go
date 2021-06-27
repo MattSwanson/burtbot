@@ -5,24 +5,31 @@ import (
 	"log"
 	"os"
 	"strings"
+	"net/http"
+	"html/template"
 	"time"
 	"github.com/MattSwanson/burtbot/db"
 	"github.com/MattSwanson/burtbot/commands"
 	"github.com/MattSwanson/burtbot/comm"
 	"github.com/MattSwanson/burtbot/helix"
+	"github.com/MattSwanson/burtbot/web"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
 var handler *commands.CmdHandler
 var client *twitch.Client
 var chatMessages []twitch.PrivateMessage
-
+var serviceAuthStatus *ServiceAuthStatus
+var servicePageTpl *template.Template
 var lastMessage string
 var lastMsg twitch.PrivateMessage 
 var lastQuacksplosion time.Time
 var schlorpLock = false
 var schlorpCD = 10
 
+func init() {
+	servicePageTpl = template.Must(template.ParseFiles("templates/serviceAuthPage.gohtml"))
+}
 
 func main() {
 
@@ -52,7 +59,9 @@ func main() {
 	handler.LoadAliases()
 	client.Join("burtstanton")
 	comm.AddChatClient(client)
-	StartWebServer(handler)
+	serviceAuthStatus = &ServiceAuthStatus{}
+	web.AuthHandleFunc("/services_auth", servicesAuthPage)
+	web.StartWebServer()
 	
 	err = client.Connect()
 	if err != nil {
@@ -153,4 +162,24 @@ func handleUserJoin(msg twitch.UserJoinMessage) {
 func unlockSchlorp() {
 	time.Sleep(time.Second * time.Duration(schlorpCD))
 	schlorpLock = false
+}
+
+
+type ServiceAuthStatus struct {
+	SpotifyAuth bool
+	SpotifyLink string
+	TwitchAuth bool
+	TwitchLink string
+}
+
+func servicesAuthPage(w http.ResponseWriter, r *http.Request) {
+	serviceAuthStatus.TwitchAuth = helix.GetAuthStatus()
+	if !serviceAuthStatus.TwitchAuth {
+		serviceAuthStatus.TwitchLink = helix.GetAuthLink()
+	}
+	serviceAuthStatus.SpotifyAuth = commands.GetSpotifyAuthStatus()
+	if !serviceAuthStatus.SpotifyAuth {
+		serviceAuthStatus.SpotifyLink = commands.GetSpotifyLink()
+	}
+	servicePageTpl.ExecuteTemplate(w, "serviceAuthPage.gohtml", serviceAuthStatus)
 }

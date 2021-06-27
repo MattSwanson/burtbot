@@ -26,11 +26,12 @@ var currentGame *Bingo = &Bingo{
 	hopper: []ball{},
 	players: make(map[string]player),
 }
-var tpl *template.Template
+var cardTpl *template.Template
 
 func init() {
 	currentGame.drawnNumbers = btree.New(2)
-	tpl = template.Must(template.ParseFiles("./templates/bingo.gohtml"))
+	cardTpl = template.Must(template.ParseFiles("templates/bingo.gohtml"))
+	http.HandleFunc("/bingo", DisplayCards)
 	RegisterCommand("bingo", currentGame)
 }
 
@@ -294,7 +295,7 @@ func DisplayCards(w http.ResponseWriter, r *http.Request) {
 		ImgSrc: p.user.ProfileImgURL,
 		Card:   p.card,
 	}
-	err := tpl.ExecuteTemplate(w, "bingo.gohtml", d)
+	err := cardTpl.ExecuteTemplate(w, "bingo.gohtml", d)
 	if err != nil {
 		fmt.Fprint(w, err.Error())
 	}

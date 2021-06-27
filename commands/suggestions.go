@@ -14,6 +14,7 @@ import (
 	"github.com/gempir/go-twitch-irc/v2"
 	"github.com/MattSwanson/burtbot/comm"
 	"github.com/MattSwanson/burtbot/db"
+	"github.com/MattSwanson/burtbot/web"
 )
 
 
@@ -22,6 +23,7 @@ type SuggestionBox struct {
 }
 
 var suggestionBox *SuggestionBox = &SuggestionBox{}
+var tpl *template.Template
 
 func init() {
 	suggestionBox.Suggestions = []db.Suggestion{}
@@ -35,9 +37,9 @@ func init() {
 	}
 	tpl = template.Must(template.ParseFiles("./templates/suggestions.gohtml"))
 	RegisterCommand("sb", suggestionBox)
-	http.HandleFunc("/suggestions", showAll)
-	http.HandleFunc("/suggestion/delete", deleteSuggestion)
-	http.HandleFunc("/suggestion/complete", markComplete)
+	web.AuthHandleFunc("/suggestions", showAll)
+	web.AuthHandleFunc("/suggestion/delete", deleteSuggestion)
+	web.AuthHandleFunc("/suggestion/complete", markComplete)
 }
 
 func NewSuggestionBox() *SuggestionBox {

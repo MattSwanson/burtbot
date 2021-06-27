@@ -11,6 +11,8 @@ import (
 	"os"
 	"log"
 	"encoding/json"
+	"net/http"
+	"html/template"
 
 	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
@@ -24,6 +26,7 @@ var cmdHandler *CmdHandler = &CmdHandler{Commands: make(map[string]Command)}
 var onPartSubscriptions []func(twitch.UserPartMessage)
 var onJoinSubscriptions []func(twitch.UserJoinMessage)
 var rawMsgSubscriptions []func(twitch.PrivateMessage)
+var helpTemplate *template.Template
 
 type Command interface {
 	Run(twitch.PrivateMessage)
@@ -37,9 +40,19 @@ type CmdHandler struct {
 	aliases	   map[string]string
 }
 
+type cmdHelp struct {
+	Name string
+	Help []string
+}
+
 // type Command struct {
 // 	Run func(twitch.PrivateMessage)
 // }
+
+func init() {
+	http.HandleFunc("/commands", commandList) 
+	helpTemplate = template.Must(template.ParseFiles("templates/help.gohtml"))
+}
 
 func NewCmdHandler(client *twitch.Client) *CmdHandler {
 	cmdHandler.Client = client
@@ -185,4 +198,24 @@ func SubscribeUserJoin(f func(twitch.UserJoinMessage)) {
 
 func SubscribeToRawMsg(f func(twitch.PrivateMessage)) {
 	rawMsgSubscriptions = append(rawMsgSubscriptions, f)
+}
+
+// show a list of commands and their arguments
+func commandList(w http.ResponseWriter, r *http.Request) {
+	cmds := []cmdHelp{}
+	for cmdName, cmd := range cmdHandler.Commands {
+		c := cmdHelp{
+			Name: cmdName,
+			Help: []string{},
+		}
+		for _, h := range cmd.Help() {
+			c.Help = append(c.Help, h)	
+		}
+		cmds = append(cmds, c)
+	}
+	err := helpTemplate.ExecuteTemplate(w, "help.gohtml", cmds)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 }
