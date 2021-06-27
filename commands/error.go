@@ -21,5 +21,5 @@ func (e *ErrorBox) Run(msg twitch.PrivateMessage) {
 }
 
 func (e ErrorBox) Help() []string {
-	return []string{}
+	return []string{"Sorry for the inconvenience."}
 }
