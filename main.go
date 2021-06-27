@@ -11,6 +11,7 @@ import (
 	"github.com/MattSwanson/burtbot/db"
 	"github.com/MattSwanson/burtbot/commands"
 	"github.com/MattSwanson/burtbot/comm"
+	"github.com/MattSwanson/burtbot/console"
 	"github.com/MattSwanson/burtbot/helix"
 	"github.com/MattSwanson/burtbot/web"
 	"github.com/gempir/go-twitch-irc/v2"
@@ -18,7 +19,6 @@ import (
 
 var handler *commands.CmdHandler
 var client *twitch.Client
-var chatMessages []twitch.PrivateMessage
 var serviceAuthStatus *ServiceAuthStatus
 var servicePageTpl *template.Template
 var lastMessage string
@@ -46,8 +46,8 @@ func main() {
 	client.OnPrivateMessage(handleMessage)
 	client.OnUserPartMessage(handleUserPart)
 	client.OnUserJoinMessage(handleUserJoin)
-	client.OnClearMessage(handleClearMessage)
-	client.OnClearChatMessage(handleClearChatMessage)
+	client.OnClearMessage(console.HandleClearMessage)
+	client.OnClearChatMessage(console.HandleClearChatMessage)
 	client.OnConnect(func() {
 		fmt.Println("burtbot circuits activated")
 	})
@@ -71,7 +71,7 @@ func main() {
 
 func handleMessage(msg twitch.PrivateMessage) {
 
-	showMessageOnConsole(msg)
+	console.ShowMessageOnConsole(msg)
 	
 	if msg.User.DisplayName == "tundragaminglive" {
 		comm.ToOverlay("miracle")

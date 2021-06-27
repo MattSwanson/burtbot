@@ -1,4 +1,4 @@
-package main 
+package console 
 
 import (
 	"fmt"
@@ -7,7 +7,20 @@ import (
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
-const numMessages = 7
+const numMessages = 25
+
+const (
+	Black = iota + 30
+	Red
+	Green
+	Yellow
+	Blue
+	Magenta
+	Cyan
+	White
+)
+
+var chatMessages []twitch.PrivateMessage
 
 func getColorEscapeCode(hexColor string) string {
 	colorCode := 34
@@ -33,24 +46,24 @@ func getColorEscapeCode(hexColor string) string {
 	ih = ih % 360
 	switch ih {
 		case 0:
-			colorCode = 31
+			colorCode = Red
 		case 60:
-			colorCode = 33
+			colorCode = Yellow
 		case 120:
-			colorCode = 32
+			colorCode = Green
 		case 180:
-			colorCode = 36
+			colorCode = Cyan
 		case 240:
-			colorCode = 34
+			colorCode = Blue
 		case 300:
-			colorCode = 35
+			colorCode = Magenta
 		default:
-			colorCode = 37
+			colorCode = White
 	}
 	return fmt.Sprintf("\033[%dm", colorCode)
 }
 
-func showMessageOnConsole(msg twitch.PrivateMessage) {
+func ShowMessageOnConsole(msg twitch.PrivateMessage) {
 	// don't show message that are commands
 	if msg.Message[0] == '!' {
 		return
@@ -58,6 +71,8 @@ func showMessageOnConsole(msg twitch.PrivateMessage) {
 	chatMessages = append(chatMessages, msg)
 	displayMessages()
 }
+
+// add ways to display errors/log lines in the chat window if wanted??
 
 func displayMessages() {
 	// print the last x messages to the screen - 5 for now
@@ -105,7 +120,7 @@ func deleteMessageByMsgID(id string) {
 	deleteChatMessage(index)
 }
 
-func handleClearChatMessage(message twitch.ClearChatMessage) {
+func HandleClearChatMessage(message twitch.ClearChatMessage) {
 	for i := 0; i < len(chatMessages); i++ {
 		if chatMessages[i].User.ID == message.TargetUserID {
 			deleteChatMessage(i)
@@ -123,8 +138,12 @@ func deleteChatMessage(index int) {
 	}	
 }
 
-func handleClearMessage(msg twitch.ClearMessage) {
+func HandleClearMessage(msg twitch.ClearMessage) {
 	deleteMessageByMsgID(msg.TargetMsgID)
 	displayMessages()
 }
 
+// Display a message in the console chat
+func AddMessage(msg string, colorCode int) {
+
+}
