@@ -2,6 +2,8 @@ package main
 
 import (
 	"net/http"
+	"strings"
+	"os"
 	"fmt"
 	"html/template"
 
@@ -11,9 +13,19 @@ import (
 
 var cmdHandler *commands.CmdHandler
 var templates *template.Template
+var serviceAuthStatus *ServiceAuthStatus
+
+type ServiceAuthStatus struct {
+	SpotifyAuth bool
+	SpotifyLink string
+	TwitchAuth bool
+	TwitchLink string
+}
+
 
 func init() {
 	templates = template.Must(template.ParseGlob("templates/*"))
+	serviceAuthStatus = &ServiceAuthStatus{}
 }
 
 
@@ -21,8 +33,8 @@ func StartWebServer(ch *commands.CmdHandler) {
 
 	cmdHandler = ch
 	// Add handlers for http stuffs
+	http.HandleFunc("/services_auth", servicesAuthPage)
 	http.HandleFunc("/twitch_authcb", helix.TwitchAuthCb)
-	http.HandleFunc("/twitch_link", helix.GetAuthLink)
 	http.HandleFunc("/eventsub_cb", helix.EventSubCallback)
 	http.HandleFunc("/commands", commandList)
 	http.HandleFunc("/bingo", commands.DisplayCards)
@@ -64,4 +76,21 @@ func commandList(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+}
+
+func servicesAuthPage(w http.ResponseWriter, r *http.Request) {
+	remote := strings.Split(r.RemoteAddr, ":")
+	if remote[0] != os.Getenv("OVERLAY_IP") {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	serviceAuthStatus.TwitchAuth = helix.GetAuthStatus()
+	if !serviceAuthStatus.TwitchAuth {
+		serviceAuthStatus.TwitchLink = helix.GetAuthLink()
+	}
+	serviceAuthStatus.SpotifyAuth = commands.GetSpotifyAuthStatus()
+	if !serviceAuthStatus.SpotifyAuth {
+		serviceAuthStatus.SpotifyLink = commands.GetSpotifyLink()
+	}
+	templates.ExecuteTemplate(w, "serviceAuthPage.gohtml", serviceAuthStatus)
 }

@@ -18,7 +18,7 @@ type Music struct {
 const skipCost = 5       //tokens
 const previousCost = 100 //tokens
 
-var spotifyAuth = spotify.NewAuthenticator("https://burtbot.app:8079/spotify_authcb",
+var spotifyAuth = spotify.NewAuthenticator("https://burtbot.app/spotify_authcb",
 	spotify.ScopeUserReadPrivate,
 	spotify.ScopeUserReadCurrentlyPlaying,
 	spotify.ScopeUserReadRecentlyPlayed,
@@ -34,10 +34,6 @@ func init() {
 func (m *Music) PostInit() {
 	go func() {
 		http.HandleFunc("/spotify_authcb", completeAuth)
-		http.HandleFunc("/spotify_link", getSpotifyLink)
-		go http.ListenAndServeTLS(":8079", "/etc/letsencrypt/live/burtbot.app/fullchain.pem", "/etc/letsencrypt/live/burtbot.app/privkey.pem", nil)
-
-		fmt.Println("Awating Spotify authentication...")
 		m.SpotifyClient = <-spotifyAuthCh
 		fmt.Println("Logged in to Spotify")
 	}()
@@ -256,18 +252,17 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 	}
 	// use the token to get an authenticated client
 	client := spotifyAuth.NewClient(tok)
-	fmt.Fprintf(w, "Login completed!")
 	spotifyAuthCh <- &client
+	http.Redirect(w, r, "https://burtbot.app/services_auth", http.StatusSeeOther)	
 }
 
-func getSpotifyLink(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
+func GetSpotifyAuthStatus() bool {
+	return mu.SpotifyClient != nil 
+}
+
+func GetSpotifyLink() string {
 	url := spotifyAuth.AuthURL(spotifyState)
-	//fmt.Println("Auth url for spotify: ", url)
-	fmt.Fprintf(w, `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>SpotAuth</title></head><body>Auth URL: <a href="%s">here</a></body></html>`, url)
+	return url
 }
 
 func (m Music) Help() []string {

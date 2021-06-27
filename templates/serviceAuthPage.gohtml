@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>burtbot command list</title>
+    <style>
+        body {
+            font-family: monospace;
+            background-color: antiquewhite;
+        }
+
+        .authd {
+            color: #00FF66;
+        }
+    </style>
+</head>
+
+<body>
+    <h1> Services Auth Status </h1>
+    <div>
+        Spotify: {{ if not .SpotifyAuth }} <a href="{{ .SpotifyLink }}">Auth</a> {{ else }} <span class="authd">Authenticated</span> {{ end }}
+        <br/>Twitch: {{ if not .TwitchAuth }} <a href="{{ .TwitchLink }}">Auth</a> {{ else }} <span class="authd">Authenticated</span> {{ end }}
+    </div>
+</body>
+</html>

@@ -125,15 +125,11 @@ func TwitchAuthCb(w http.ResponseWriter, r *http.Request) {
 	}
 	twitchAccessToken = respObj.Access_token
 	twitchRefreshToken = respObj.Refresh_token
-	fmt.Fprintf(w, "Twitch API authd!")
 	twitchAuthCh <- true
+	http.Redirect(w, r, "https://burtbot.app/services_auth", http.StatusSeeOther)
 }
 
-func GetAuthLink(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+func GetAuthLink() string {
 	var buf bytes.Buffer
 	buf.WriteString("https://id.twitch.tv/oauth2/authorize")
 	buf.WriteByte('?')
@@ -144,7 +140,7 @@ func GetAuthLink(w http.ResponseWriter, r *http.Request) {
 		"scope":         {"user:read:email"},
 	}
 	buf.WriteString(v.Encode())
-	fmt.Fprintf(w, `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>TwiAuth</title></head><body>Auth URL: <a href="%s">here</a></body></html>`, buf.String())
+	return buf.String()
 }
 
 func refreshAuth() {
