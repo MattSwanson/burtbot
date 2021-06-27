@@ -20,7 +20,13 @@ const (
 	White
 )
 
-var chatMessages []twitch.PrivateMessage
+type nonChatMessage struct {
+	Message		string
+	ColorCode	int 
+}
+
+//var chatMessages []twitch.PrivateMessage
+var chatMessages []interface{}
 
 func getColorEscapeCode(hexColor string) string {
 	colorCode := 34
@@ -87,22 +93,27 @@ func displayMessages() {
 	}
 	end := start + num
 	for i := start; i < end; i++ {
-		badges := ""
-		msg := chatMessages[i]
-		if len(msg.User.Badges) > 0 {
-			if _, ok := msg.User.Badges["broadcaster"]; ok {
-				c := getColorEscapeCode("#FF0000")
-				badges += fmt.Sprintf("%s[B]", c)
-			}
-			if _, ok := msg.User.Badges["moderator"]; ok {
-				c := getColorEscapeCode("#00FF00")
-				badges += fmt.Sprintf("%s[M]", c)
-			}
+		switch msg := chatMessages[i].(type) {
+			case twitch.PrivateMessage: 
+				badges := ""
+				if len(msg.User.Badges) > 0 {
+					if _, ok := msg.User.Badges["broadcaster"]; ok {
+						c := getColorEscapeCode("#FF0000")
+						badges += fmt.Sprintf("%s[B]", c)
+					}
+					if _, ok := msg.User.Badges["moderator"]; ok {
+						c := getColorEscapeCode("#00FF00")
+						badges += fmt.Sprintf("%s[M]", c)
+					}
+				}
+				cesc := getColorEscapeCode(msg.User.Color)
+				h, m, _ := msg.Time.Clock()
+				fmt.Println(fmt.Sprintf("\033[0m%02d:%02d%s%s[%s]\033[0m: %s", 
+					h, m, badges, cesc, msg.User.DisplayName, msg.Message))
+			case nonChatMessage:
+				fmt.Println(fmt.Sprintf("\033[%dm%s", msg.ColorCode, msg.Message))
 		}
-		cesc := getColorEscapeCode(msg.User.Color)
-		h, m, _ := chatMessages[i].Time.Clock()
-		fmt.Println(fmt.Sprintf("%02d:%02d%s%s[%s]\033[0m: %s", 
-			h, m, badges, cesc, msg.User.DisplayName, msg.Message))
+
 	}
 }
 
@@ -110,8 +121,11 @@ func deleteMessageByMsgID(id string) {
 	// find it
 	index := -1
 	for i := 0; i < len(chatMessages); i++ {
-		if chatMessages[i].ID == id {
-			index = i
+		switch msg := chatMessages[i].(type) {
+			case twitch.PrivateMessage:
+				if msg.ID == id {
+					index = i
+				}
 		}
 	}
 	if index == -1 {
@@ -122,9 +136,12 @@ func deleteMessageByMsgID(id string) {
 
 func HandleClearChatMessage(message twitch.ClearChatMessage) {
 	for i := 0; i < len(chatMessages); i++ {
-		if chatMessages[i].User.ID == message.TargetUserID {
-			deleteChatMessage(i)
-			i--
+		switch msg := chatMessages[i].(type) {
+		case twitch.PrivateMessage:
+			if msg.User.ID == message.TargetUserID {
+				deleteChatMessage(i)
+				i--
+			}
 		}
 	}
 	displayMessages()
@@ -145,5 +162,9 @@ func HandleClearMessage(msg twitch.ClearMessage) {
 
 // Display a message in the console chat
 func AddMessage(msg string, colorCode int) {
-
+	chatMessages = append(chatMessages, nonChatMessage{
+		Message: msg,
+		ColorCode: colorCode,
+	})
+	displayMessages()
 }

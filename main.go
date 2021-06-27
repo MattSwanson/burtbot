@@ -63,6 +63,7 @@ func main() {
 	web.AuthHandleFunc("/services_auth", servicesAuthPage)
 	web.StartWebServer()
 	
+	console.AddMessage("burtbot started", console.Red)
 	err = client.Connect()
 	if err != nil {
 		panic(err)
