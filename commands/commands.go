@@ -15,6 +15,7 @@ import (
 	"html/template"
 
 	"github.com/MattSwanson/burtbot/comm"
+	"github.com/MattSwanson/burtbot/console"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
@@ -86,7 +87,44 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 	if !strings.HasPrefix(msg.Message, "!") {
 		return
 	}
+	msg.Message = handler.InjectAliases(msg.Message)
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
+	lower := strings.ToLower(msg.Message)
+	if lower == "!help" {
+		handler.HelpAll()
+	}
+	fields := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
+	if IsMod(msg.User) && fields[0] == "alias" && len(fields) >= 4 {
+		// !alias add alias command
+		if fields[1] == "add" {
+			originalCommand := strings.Join(fields[3:], " ")
+			err := handler.RegisterAlias(fields[2], originalCommand)			
+			if err != nil {
+				comm.ToChat(msg.Channel, fmt.Sprintf("The alias [%s] already exists.", fields[2]))
+				return
+			}
+			comm.ToChat(msg.Channel, fmt.Sprintf("Created alias [%s] for [%s]", fields[2], originalCommand)) 
+			return
+		}
+	}
+
+	if lower == "!commands" {
+		comm.ToChat(msg.Channel, "See available commands at: https://burtbot.app/commands")
+		return
+	}
+
+	if lower == "w" {
+		comm.ToOverlay("up")
+	}
+	if lower == "a" {
+		comm.ToOverlay("left")
+	}
+	if lower == "s" {
+		comm.ToOverlay("down")
+	}
+	if lower == "d" {
+		comm.ToOverlay("right")
+	}
 	if len(args) == 0 {
 		return
 	}
@@ -180,6 +218,7 @@ func (handler *CmdHandler) InjectAliases(message string) string {
 		return message
 	}
 	// if so replace the alias with the command it represents
+	console.AddMessage(fmt.Sprintf("expanding %s to %s", message, command), console.Green)
 	fields[0] = "!" + command
 	return strings.Join(fields, " ")
 }
