@@ -38,7 +38,6 @@ func init() {
 	http.HandleFunc("/suggestions", showAll)
 	http.HandleFunc("/suggestion/delete", deleteSuggestion)
 	http.HandleFunc("/suggestion/complete", markComplete)
-	gug.Foo()
 }
 
 func NewSuggestionBox() *SuggestionBox {
