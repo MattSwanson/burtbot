@@ -108,10 +108,10 @@ func displayMessages() {
 				}
 				cesc := getColorEscapeCode(msg.User.Color)
 				h, m, _ := msg.Time.Clock()
-				fmt.Println(fmt.Sprintf("\033[0m%02d:%02d%s%s[%s]\033[0m: %s", 
+				fmt.Println(fmt.Sprintf("%02d:%02d%s%s[%s]\033[0m: %s", 
 					h, m, badges, cesc, msg.User.DisplayName, msg.Message))
 			case nonChatMessage:
-				fmt.Println(fmt.Sprintf("\033[%dm%s", msg.ColorCode, msg.Message))
+				fmt.Println(fmt.Sprintf("\033[%dm%s\033[0m", msg.ColorCode, msg.Message))
 		}
 
 	}
