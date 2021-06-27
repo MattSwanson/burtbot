@@ -33,7 +33,7 @@ func StartWebServer(ch *commands.CmdHandler) {
 
 	cmdHandler = ch
 	// Add handlers for http stuffs
-	http.HandleFunc("/services_auth", servicesAuthPage)
+	AuthHandleFunc("/services_auth", servicesAuthPage)
 	http.HandleFunc("/twitch_authcb", helix.TwitchAuthCb)
 	http.HandleFunc("/eventsub_cb", helix.EventSubCallback)
 	http.HandleFunc("/commands", commandList)
@@ -78,12 +78,33 @@ func commandList(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func servicesAuthPage(w http.ResponseWriter, r *http.Request) {
+func AuthHandleFunc(pattern string, handlerFunc func(http.ResponseWriter, *http.Request)) {
+	wrappedFunc := func(w http.ResponseWriter, r *http.Request) {
+		// run our auth on the request
+		if !authenticateRequest(r) {
+		// if no go - retrun StatusForbidden
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		// otherwise run our handlerFunc
+		handlerFunc(w, r)
+	}
+	http.HandleFunc(pattern, wrappedFunc)
+}
+
+// authenticateRequest will check the request to make sure it's legit. Returns true if
+// everything checks out - false for any other situation including errors
+//TODO needs to be turned into actual auth - just checking against remote address at
+// this point
+func authenticateRequest(r *http.Request) bool {
 	remote := strings.Split(r.RemoteAddr, ":")
 	if remote[0] != os.Getenv("OVERLAY_IP") {
-		http.Error(w, "Forbidden", http.StatusForbidden)
-		return
+		return false
 	}
+	return true
+}
+
+func servicesAuthPage(w http.ResponseWriter, r *http.Request) {
 	serviceAuthStatus.TwitchAuth = helix.GetAuthStatus()
 	if !serviceAuthStatus.TwitchAuth {
 		serviceAuthStatus.TwitchLink = helix.GetAuthLink()
