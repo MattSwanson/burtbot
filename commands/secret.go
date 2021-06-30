@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"encoding/json"
 	"time"
 	"strings"
 
@@ -10,6 +11,7 @@ import (
 )
 
 var lastQuacksplosion time.Time
+var lastArrowMsg time.Time
 var lastMessage string
 var lastMsg twitch.PrivateMessage 
 var schlorpLock = false
@@ -39,7 +41,22 @@ func secretCommands(msg twitch.PrivateMessage) {
 			}
 		}
 	}
-	
+
+	if strings.ToLower(msg.User.DisplayName) == "velusip" {
+		if time.Since(lastArrowMsg).Seconds() > 21600 {
+			comm.ToChat(msg.Channel, " Arrow keys all day -> -> -> -> -> -> -> -> -> -> -> ")
+			comm.ToOverlay("tts true For absolutely no reason, everyone hold down your right arrow key for a very long time")
+			m := MarqueeMsg{
+				RawMessage: " -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> ",
+			}
+			j, err := json.Marshal(m)
+			if err != nil {
+				return	
+			}
+			comm.ToOverlay(fmt.Sprintf("marquee once %s", string(j)))
+		}
+	}
+
 	if strings.Compare(msg.User.Name, lastMsg.User.Name) == 0 && strings.Compare(msg.Message, lastMessage+" "+lastMessage) == 0 {
 		// break the pyramid with a schlorp
 		comm.ToChat(msg.Channel, "tjportSchlorp1 tjportSchlorp2 tjportSchlorp3")
