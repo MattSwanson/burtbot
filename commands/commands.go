@@ -15,7 +15,6 @@ import (
 	"html/template"
 
 	"github.com/MattSwanson/burtbot/comm"
-	"github.com/MattSwanson/burtbot/console"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
@@ -84,6 +83,19 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 	for _, fn := range rawMsgSubscriptions {
 		fn(msg)
 	}
+	if msg.Message == "w" {
+		comm.ToOverlay("up")
+	}
+	if msg.Message == "a" {
+		comm.ToOverlay("left")
+	}
+	if msg.Message == "s" {
+		comm.ToOverlay("down")
+	}
+	if msg.Message == "d" {
+		comm.ToOverlay("right")
+	}
+
 	if !strings.HasPrefix(msg.Message, "!") {
 		return
 	}
@@ -113,18 +125,6 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 		return
 	}
 
-	if lower == "w" {
-		comm.ToOverlay("up")
-	}
-	if lower == "a" {
-		comm.ToOverlay("left")
-	}
-	if lower == "s" {
-		comm.ToOverlay("down")
-	}
-	if lower == "d" {
-		comm.ToOverlay("right")
-	}
 	if len(args) == 0 {
 		return
 	}
@@ -218,7 +218,6 @@ func (handler *CmdHandler) InjectAliases(message string) string {
 		return message
 	}
 	// if so replace the alias with the command it represents
-	console.AddMessage(fmt.Sprintf("expanding %s to %s", message, command), console.Green)
 	fields[0] = "!" + command
 	return strings.Join(fields, " ")
 }
