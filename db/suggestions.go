@@ -66,7 +66,7 @@ func GetSuggestions() ([]Suggestion, error) {
 		  suggestions.complete
 		 FROM suggestions
 		 JOIN users ON users.twitch_id = suggestions.user_id
-		 ORDER BY suggestions.id
+		 ORDER BY complete, suggestions.id
 		 `)
 	if err != nil {
 		return suggestions, err
