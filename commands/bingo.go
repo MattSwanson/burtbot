@@ -146,7 +146,9 @@ func (b *Bingo) Start(channelName string) {
 			comm.ToChat(chatChannel, fmt.Sprintf("Type !bingo join to buy a card for %d tokens.", cardCost))
 			// Wait 30 seconds for people to join before starting
 			time.Sleep(time.Second * waitTime)
-			comm.ToChat(chatChannel, "Bingo will now commence.")
+			if b.running {
+				comm.ToChat(chatChannel, "Bingo will now commence.")
+			}
 			t := time.NewTicker(time.Second * drawTime)
 			defer t.Stop()
 			for {
