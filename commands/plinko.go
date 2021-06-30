@@ -44,8 +44,21 @@ func (p *Plinko) Run(msg twitch.PrivateMessage) {
 		}
 		DeductTokens(msg.User.Name, cost)
 		comm.ToOverlay(fmt.Sprintf("plinko drop %s %s %s", args[2], msg.User.DisplayName, msg.User.Color))
+		return
 	}
 
+	if args[1] == "super" && len(args) >= 4 {
+		n, err := strconv.Atoi(args[3])
+		if err != nil {
+			return
+		}
+		if count := GetTokenCount(msg.User); count < n {
+			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you only have %d tokens. Can't wager %d.", msg.User.DisplayName, count, n))
+			return
+		}
+		DeductTokens(msg.User.Name, n)
+		comm.ToOverlay(fmt.Sprintf("plinko drop %s %s %s %d", args[2], msg.User.DisplayName, msg.User.Color, n))
+	}
 }
 
 func (p *Plinko) HandleResponse(args []string) {
@@ -85,5 +98,6 @@ func (p *Plinko) Help() []string {
 		"!plinko drop [number] to drop a token at the specified drop point",
 		"!plinko drop all will drop a token at each drop point",
 		"Each token costs one token.",
+		"!plinko super [number] [wager] will drop a token for the wagered amount",
 	}
 }
