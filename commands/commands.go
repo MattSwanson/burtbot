@@ -106,9 +106,9 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 		handler.HelpAll()
 	}
 	fields := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
-	if IsMod(msg.User) && fields[0] == "alias" && len(fields) >= 4 {
+	if IsMod(msg.User) && fields[0] == "alias" {
 		// !alias add alias command
-		if fields[1] == "add" {
+		if len(fields) > 3 && fields[1] == "add" {
 			originalCommand := strings.Join(fields[3:], " ")
 			err := handler.RegisterAlias(fields[2], originalCommand)			
 			if err != nil {
@@ -117,6 +117,11 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 			}
 			comm.ToChat(msg.Channel, fmt.Sprintf("Created alias [%s] for [%s]", fields[2], originalCommand)) 
 			return
+		}
+		if len(fields) > 2 && fields[1] == "remove" {
+			if handler.RemoveAlias(fields[2]) {
+				comm.ToChat(msg.Channel, fmt.Sprintf("Successfully removed alias [%s]", fields[2]))
+			}
 		}
 	}
 
@@ -191,12 +196,15 @@ func (handler *CmdHandler) RegisterAlias(alias, commandName string) error {
 	return nil
 }
 
-func (handler *CmdHandler) RemoveAlias(alias string) {
-	if _, ok := handler.Commands[alias]; ok {
-		delete(handler.Commands, alias)
-		delete(handler.aliases, alias)
-		handler.saveAliasesToFile()
+func (handler *CmdHandler) RemoveAlias(alias string) bool {
+	fmt.Println("trying to remove ", alias)
+	if _, ok := handler.aliases[alias]; !ok {
+		return false
 	}
+	delete(handler.Commands, alias)
+	delete(handler.aliases, alias)
+	handler.saveAliasesToFile()
+	return true
 }
 
 func (handler *CmdHandler) saveAliasesToFile() {
