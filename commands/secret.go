@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"encoding/json"
 	"time"
 	"strings"
 
@@ -43,7 +42,7 @@ func secretCommands(msg twitch.PrivateMessage) {
 	}
 
 	if strings.ToLower(msg.User.DisplayName) == "velusip" {
-		if time.Since(lastArrowMsg).Seconds() > 21600 {
+	/*	if time.Since(lastArrowMsg).Seconds() > 21600 {
 			comm.ToChat(msg.Channel, " Arrow keys all day -> -> -> -> -> -> -> -> -> -> -> ")
 			comm.ToOverlay("tts true For absolutely no reason, everyone hold down your right arrow key for a very long time")
 			m := MarqueeMsg{
@@ -54,7 +53,8 @@ func secretCommands(msg twitch.PrivateMessage) {
 				return	
 			}
 			comm.ToOverlay(fmt.Sprintf("marquee once %s", string(j)))
-		}
+			lastArrowMsg = time.Now()
+		}*/
 	}
 
 	if strings.Compare(msg.User.Name, lastMsg.User.Name) == 0 && strings.Compare(msg.Message, lastMessage+" "+lastMessage) == 0 {
