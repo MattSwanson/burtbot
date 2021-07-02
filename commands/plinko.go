@@ -39,8 +39,16 @@ func (p *Plinko) Run(msg twitch.PrivateMessage) {
 			return
 		}
 		cost := 1
-		if args[2] == "all" && numTokens >= 5 {
-			cost = 5
+		drop, err := strconv.Atoi(args[2])
+		if err != nil {
+			if args[2] == "all" && numTokens >= 5 {
+				cost = 5
+			} else {
+				return
+			}
+		}
+		if drop < 0 || drop > 4 {
+			return
 		}
 		DeductTokens(msg.User.Name, cost)
 		comm.ToOverlay(fmt.Sprintf("plinko drop %s %s %s", args[2], msg.User.DisplayName, msg.User.Color))
@@ -49,7 +57,11 @@ func (p *Plinko) Run(msg twitch.PrivateMessage) {
 
 	if args[1] == "super" && len(args) >= 4 {
 		n, err := strconv.Atoi(args[3])
-		if err != nil {
+		if err != nil || n < 0 {
+			return
+		}
+		drop, err := strconv.Atoi(args[2])
+		if err != nil || drop < 0 || drop > 4 {
 			return
 		}
 		if count := GetTokenCount(msg.User); count < n {
