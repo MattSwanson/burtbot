@@ -209,6 +209,23 @@ func (t *TokenMachine) Run(msg twitch.PrivateMessage) {
 		t.GrantToken(strings.ToLower(args[2]), n)
 		comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you were given %d tokens! Use them to play games.", args[2], n))
 	}
+
+	if args[1] == "give" {
+		if len(args) < 4 {
+			return
+		}
+		n, err := strconv.Atoi(args[3])
+		if err != nil || n <= 0 {
+			return
+		}
+		if tokenCount := t.getTokenCount(msg.User); tokenCount < n {
+			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you can't give that many tokens, you only have %d.", msg.User.DisplayName, tokenCount))
+			return
+		}
+		DeductTokens(msg.User.DisplayName, n)
+		GrantToken(strings.ToLower(args[2]), n)
+		comm.ToChat(msg.Channel, fmt.Sprintf("@%s gave %d tokens to @%s! How nice!", msg.User.DisplayName, n, args[2]))
+	}
 }
 
 func (t *TokenMachine) DeductTokens(username string, number int) bool {
@@ -275,5 +292,6 @@ func (t *TokenMachine) Help() []string {
 		"!tokenmachine buy to buy tokens with hard earned burtcoin",
 		fmt.Sprintf("Get %d tokens for one burtcoin", tokenRate),
 		"!tokenmachine balance to see how many tokens you have. For now.",
+		"!tokenmachine give [user] [amount] to give that user that amount of tokens out your own pocket.",
 	}
 }
