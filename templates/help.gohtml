@@ -19,6 +19,12 @@
                 {{ range .Help }}
                     <li>{{ . }}</li>
                 {{ end }}
+                {{ if .Aliases }}
+                    <h5> Aliases </h5>
+                    {{ range $alias, $cmd := .Aliases }} 
+                    <li>{{ $alias }} - {{ $cmd }}</li>
+                    {{ end }}
+                {{ end }}
             {{ end }}
         </ul>
 </body>
