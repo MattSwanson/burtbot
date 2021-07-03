@@ -43,6 +43,7 @@ type CmdHandler struct {
 type cmdHelp struct {
 	Name string
 	Help []string
+	Aliases map[string]string
 }
 
 // type Command struct {
@@ -253,6 +254,12 @@ func commandList(w http.ResponseWriter, r *http.Request) {
 		c := cmdHelp{
 			Name: cmdName,
 			Help: []string{},
+			Aliases: map[string]string{},
+		}
+		for k, v := range cmdHandler.aliases {
+			if strings.HasPrefix(v, cmdName) {
+				c.Aliases[k] = v
+			}
 		}
 		for _, h := range cmd.Help() {
 			c.Help = append(c.Help, h)	
