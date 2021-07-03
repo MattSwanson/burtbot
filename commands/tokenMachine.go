@@ -72,160 +72,58 @@ func (t *TokenMachine) Run(msg twitch.PrivateMessage) {
 		return
 	}
 
-	if args[1] == "kick" {
-
-		if t.attendantDistracted {
-			rand.Seed(time.Now().Unix())
-			if rand.Float64() >= kickProbability {
-				// failed to get a token
-				comm.ToChat(msg.Channel, fmt.Sprintf("@%s you bad at kicking machine", msg.User.DisplayName))
+	switch args[1] {
+		case "kick":
+			t.kick(&msg)
+		case "distract":
+			t.distract(&msg)
+		case "buy":
+			if len(args) < 3 {
 				return
 			}
-			t.GrantToken(strings.ToLower(msg.User.Name), 1)
-			comm.ToChat(msg.Channel, fmt.Sprintf("DING! @%s got a free token!", msg.User.DisplayName))
-			return
-		}
-
-		if time.Now().Before(t.lastKick.Add(time.Second * kickCooldown)) {
-			comm.ToChat(msg.Channel, "You can't kick the machine with the Attendant watching. Give it time.")
-			return
-		}
-		t.lastKick = time.Now()
-
-		r := rand.Float64()
-		if r >= kickProbability {
-			// failed to get a token
-			comm.ToChat(msg.Channel, "You kick the token machine but nothing happens.")
-			comm.ToChat(msg.Channel, "The Attendant comes to investigate the noise.")
-			comm.ToChat(msg.Channel, "You leave the room before he notices you.")
-			return
-		}
-
-		if r < kickJackpotProbability {
-			t.GrantToken(strings.ToLower(msg.User.Name), jackpotAmount)
-			comm.ToChat(msg.Channel, fmt.Sprintf("WOW! @%s kicks the token machine and %d tokens fall from it's orifices.", msg.User.DisplayName, jackpotAmount))
-			comm.ToChat(msg.Channel, "They grab their bounty from the floor quickly and get away before The Attendent rushes over.")
-			return
-		}
-
-		t.GrantToken(strings.ToLower(msg.User.Name), 1)
-		comm.ToChat(msg.Channel, "You kick the token machine and a token falls into the tray.")
-		comm.ToChat(msg.Channel, "As you grab the token you notice the Attendant coming.")
-		comm.ToChat(msg.Channel, "You escape into the shadows with your request token.")
-		return
+			amount, err := strconv.Atoi(args[2])
+			if err != nil {
+				return
+			}
+			t.buyTokens(amount, &msg)
+		case "balance":
+			t.checkBalance(&msg)
+		case "set":
+			if !IsMod(msg.User) || len(args) < 4 {
+				return
+			}
+			n, err := strconv.Atoi(args[3])
+			if err != nil {
+				return
+			}
+			t.setTokenCount(args[2], n)
+		case "grant":
+			if !IsMod(msg.User) || len(args) < 4 {
+				return
+			}
+			n, err := strconv.Atoi(args[3])
+			if err != nil {
+				return
+			}
+			t.GrantToken(strings.ToLower(args[2]), n)
+			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you were given %d tokens! Use them to play games.", args[2], n))
+		case "give":
+			if len(args) < 4 {
+				return
+			}
+			n, err := strconv.Atoi(args[3])
+			if err != nil || n <= 0 {
+				return
+			}
+			if tokenCount := t.getTokenCount(msg.User); tokenCount < n {
+				comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you can't give that many tokens, you only have %d.", msg.User.DisplayName, tokenCount))
+				return
+			}
+			DeductTokens(msg.User.DisplayName, n)
+			GrantToken(strings.ToLower(args[2]), n)
+			comm.ToChat(msg.Channel, fmt.Sprintf("@%s gave %d tokens to @%s! How nice!", msg.User.DisplayName, n, args[2]))
 	}
 
-	if args[1] == "distract" {
-		if t.getTokenCount(msg.User) == 0 {
-			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you don't have anything to distract the Attendant with.", msg.User.DisplayName))
-			return
-		}
-		if time.Now().Before(t.lastDistract.Add(time.Hour * distractCooldown)) {
-			comm.ToChat(msg.Channel, "The Attendant won't fall for those shenanigans again. At least not yet.")
-			return
-		}
-		t.lastDistract = time.Now()
-		t.attendantDistracted = true
-		t.setTokenCount(msg.User.DisplayName, t.getTokenCount(msg.User)-1)
-		comm.ToChat(msg.Channel, fmt.Sprintf("@%s throws a token into the back hallway.", msg.User.DisplayName))
-		comm.ToChat(msg.Channel, "The Attendant goes off to investigate the noise.")
-		comm.ToChat(msg.Channel, "Quick! The token machine is unattended, now would be a good check to try and get free tokens!")
-		go func() {
-			time.Sleep(time.Second * distractTime)
-			t.attendantDistracted = false
-			comm.ToChat(msg.Channel, "The Attendant returns from checking out the suspicious noise.")
-		}()
-		return
-	}
-
-	if args[1] == "buy" {
-		//TODO - not functional yet - also no one has burtcoins yet so not a lie
-		if len(args) < 3 {
-			return
-		}
-		amount, err := strconv.Atoi(args[2])
-		if err != nil {
-			return
-		}
-		if amount%tokenRate != 0 {
-			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, right now tokens are %[2]d for one burtcoin. Please buy in multiples of %[2]d.", msg.User.DisplayName, tokenRate))
-			return
-		}
-		bcBalance := GetBurtcoinBalance(msg.User)
-		if bcBalance < 1 {
-			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you don't have any burtcoins with which to buy tokens.", msg.User.Name))
-			return
-		}
-		if float64(amount)/float64(tokenRate) > bcBalance {
-			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you don't have enough burtcoins to buy %d tokens.", msg.User.Name, amount))
-			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you have %.2f. Need %d.", msg.User.Name, bcBalance, amount/tokenRate))
-			return
-		}
-
-		if DeductBurtcoin(msg.User, float64(amount)/float64(tokenRate)) {
-			t.GrantToken(strings.ToLower(msg.User.Name), amount)
-			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you received %d tokens for %d burtcoin. Thanks!", msg.User.DisplayName, amount, amount/tokenRate))
-		} else {
-			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, unable to deduct funds from you burtcoin wallet. No tokens for you. Yet...", msg.User.DisplayName))
-		}
-
-		return
-	}
-
-	if args[1] == "balance" {
-		n := t.getTokenCount(msg.User)
-		if n == 0 {
-			comm.ToChat(msg.Channel, fmt.Sprintf(`@%s, Ya got NONE!`, msg.User.Name))
-			return
-		}
-		plural := ""
-		if n > 1 {
-			plural = "s"
-		}
-		comm.ToChat(msg.Channel, fmt.Sprintf(`@%s, you have %d token%s. Use them wisely. Or not.`, msg.User.Name, n, plural))
-	}
-
-	if args[1] == "set" {
-		if !IsMod(msg.User) || len(args) < 4 {
-			return
-		}
-		n, err := strconv.Atoi(args[3])
-		if err != nil {
-			log.Println("error converting to int - ", err.Error())
-			return
-		}
-		t.setTokenCount(args[2], n)
-	}
-
-	if args[1] == "grant" {
-		if !IsMod(msg.User) || len(args) < 4 {
-			return
-		}
-		n, err := strconv.Atoi(args[3])
-		if err != nil {
-			log.Println("error converting to int - ", err.Error())
-			return
-		}
-		t.GrantToken(strings.ToLower(args[2]), n)
-		comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you were given %d tokens! Use them to play games.", args[2], n))
-	}
-
-	if args[1] == "give" {
-		if len(args) < 4 {
-			return
-		}
-		n, err := strconv.Atoi(args[3])
-		if err != nil || n <= 0 {
-			return
-		}
-		if tokenCount := t.getTokenCount(msg.User); tokenCount < n {
-			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you can't give that many tokens, you only have %d.", msg.User.DisplayName, tokenCount))
-			return
-		}
-		DeductTokens(msg.User.DisplayName, n)
-		GrantToken(strings.ToLower(args[2]), n)
-		comm.ToChat(msg.Channel, fmt.Sprintf("@%s gave %d tokens to @%s! How nice!", msg.User.DisplayName, n, args[2]))
-	}
 }
 
 func (t *TokenMachine) DeductTokens(username string, number int) bool {
@@ -285,6 +183,106 @@ func (t *TokenMachine) FollowReward(username string) {
 	s := fmt.Sprintf("Thanks for following @%s! Have %d tokens to spend on useless things...", username, followRewardAmount)
 	comm.ToChat("burtstanton", s)
 	t.GrantToken(username, followRewardAmount)
+}
+
+func (t *TokenMachine) buyTokens(amount int, msg *twitch.PrivateMessage) {
+	if amount%tokenRate != 0 {
+		comm.ToChat(msg.Channel, fmt.Sprintf("@%s, right now tokens are %[2]d for one burtcoin. Please buy in multiples of %[2]d.", msg.User.DisplayName, tokenRate))
+		return
+	}
+	bcBalance := GetBurtcoinBalance(msg.User)
+	if bcBalance < 1 {
+		comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you don't have any burtcoins with which to buy tokens.", msg.User.Name))
+		return
+	}
+	if float64(amount)/float64(tokenRate) > bcBalance {
+		comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you don't have enough burtcoins to buy %d tokens.", msg.User.Name, amount))
+		comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you have %.2f. Need %d.", msg.User.Name, bcBalance, amount/tokenRate))
+		return
+	}
+
+	if DeductBurtcoin(msg.User, float64(amount)/float64(tokenRate)) {
+		t.GrantToken(strings.ToLower(msg.User.Name), amount)
+		comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you received %d tokens for %d burtcoin. Thanks!", msg.User.DisplayName, amount, amount/tokenRate))
+	} else {
+		comm.ToChat(msg.Channel, fmt.Sprintf("@%s, unable to deduct funds from you burtcoin wallet. No tokens for you. Yet...", msg.User.DisplayName))
+	}
+}
+
+func (t *TokenMachine) checkBalance(msg *twitch.PrivateMessage) {
+	n := t.getTokenCount(msg.User)
+	if n == 0 {
+		comm.ToChat(msg.Channel, fmt.Sprintf(`@%s, Ya got NONE!`, msg.User.Name))
+		return
+	}
+	plural := ""
+	if n > 1 {
+		plural = "s"
+	}
+	comm.ToChat(msg.Channel, fmt.Sprintf(`@%s, you have %d token%s. Use them wisely. Or not.`, msg.User.Name, n, plural))
+}
+
+func (t *TokenMachine) distract(msg *twitch.PrivateMessage) {
+	if t.getTokenCount(msg.User) == 0 {
+		comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you don't have anything to distract the Attendant with.", msg.User.DisplayName))
+		return
+	}
+	if time.Now().Before(t.lastDistract.Add(time.Hour * distractCooldown)) {
+		comm.ToChat(msg.Channel, "The Attendant won't fall for those shenanigans again. At least not yet.")
+		return
+	}
+	t.lastDistract = time.Now()
+	t.attendantDistracted = true
+	t.setTokenCount(msg.User.DisplayName, t.getTokenCount(msg.User)-1)
+	comm.ToChat(msg.Channel, fmt.Sprintf("@%s throws a token into the back hallway.", msg.User.DisplayName))
+	comm.ToChat(msg.Channel, "The Attendant goes off to investigate the noise.")
+	comm.ToChat(msg.Channel, "Quick! The token machine is unattended, now would be a good check to try and get free tokens!")
+	go func() {
+		time.Sleep(time.Second * distractTime)
+		t.attendantDistracted = false
+		comm.ToChat(msg.Channel, "The Attendant returns from checking out the suspicious noise.")
+	}()
+}
+
+func (t *TokenMachine) kick(msg *twitch.PrivateMessage) {
+	if t.attendantDistracted {
+		rand.Seed(time.Now().Unix())
+		if rand.Float64() >= kickProbability {
+			// failed to get a token
+			comm.ToChat(msg.Channel, fmt.Sprintf("@%s you bad at kicking machine", msg.User.DisplayName))
+			return
+		}
+		t.GrantToken(strings.ToLower(msg.User.Name), 1)
+		comm.ToChat(msg.Channel, fmt.Sprintf("DING! @%s got a free token!", msg.User.DisplayName))
+		return
+	}
+
+	if time.Now().Before(t.lastKick.Add(time.Second * kickCooldown)) {
+		comm.ToChat(msg.Channel, "You can't kick the machine with the Attendant watching. Give it time.")
+		return
+	}
+	t.lastKick = time.Now()
+
+	r := rand.Float64()
+	if r >= kickProbability {
+		// failed to get a token
+		comm.ToChat(msg.Channel, "You kick the token machine but nothing happens.")
+		comm.ToChat(msg.Channel, "The Attendant comes to investigate the noise.")
+		comm.ToChat(msg.Channel, "You leave the room before he notices you.")
+		return
+	}
+
+	if r < kickJackpotProbability {
+		t.GrantToken(strings.ToLower(msg.User.Name), jackpotAmount)
+		comm.ToChat(msg.Channel, fmt.Sprintf("WOW! @%s kicks the token machine and %d tokens fall from it's orifices.", msg.User.DisplayName, jackpotAmount))
+		comm.ToChat(msg.Channel, "They grab their bounty from the floor quickly and get away before The Attendent rushes over.")
+		return
+	}
+
+	t.GrantToken(strings.ToLower(msg.User.Name), 1)
+	comm.ToChat(msg.Channel, "You kick the token machine and a token falls into the tray.")
+	comm.ToChat(msg.Channel, "As you grab the token you notice the Attendant coming.")
+	comm.ToChat(msg.Channel, "You escape into the shadows with your request token.")
 }
 
 func (t *TokenMachine) Help() []string {
