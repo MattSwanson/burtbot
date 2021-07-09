@@ -1,11 +1,7 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
-	"log"
-	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -21,6 +17,7 @@ type counter struct {
 
 var cooldown int = 15
 var locked = false
+var count int
 var ded *Ded = &Ded{}
 
 func init() {
@@ -45,50 +42,33 @@ func (d *Ded) Run(msg twitch.PrivateMessage) {
 		comm.ToChat(msg.Channel, "Too many arguments to ded. Why you do dis?")
 		return
 	}
-	count := -1
-	var err error
 	if len(args) == 2 {
 		if !IsMod(msg.User) {
 			comm.ToChat(msg.Channel, "Only mods can set the counter directly.")
 			return
 		}
-		count, err = strconv.Atoi(args[1])
+		newCount, err := strconv.Atoi(args[1])
 		if err != nil {
 			comm.ToChat(msg.Channel, "ded requires a number not a thing else")
 			return
 		}
+		count = newCount
+		comm.ToChat(msg.Channel, fmt.Sprintf("ded counter set to %d", count))
+		comm.ToOverlay(fmt.Sprintf("ded %d", count))
+		return
 	}
 
-	u := "http://localhost:8080/inc_count"
-	if count >= 0 {
-		u = "http://localhost:8080/set_count"
-	}
-	resp, err := http.PostForm(u, url.Values{"count": {strconv.Itoa(count)}})
-	if err != nil {
-		comm.ToChat(msg.Channel, "ded counter seems to be off")
-		log.Println(err.Error())
-		return
-	}
-	c := counter{}
-	err = json.NewDecoder(resp.Body).Decode(&c)
-	if err != nil {
-		comm.ToChat(msg.Channel, "I'm sorry, I messed up. Try again some other decade.")
-		log.Println(err.Error())
-		return
-	}
-	if c.Count == 0 {
-		comm.ToChat(msg.Channel, "ded counter reset")
-		return
-	}
+	count++
 	var plural string
-	if c.Count > 1 {
+	if count > 1 {
 		plural = "s"
 	}
-	comm.ToChat(msg.Channel, fmt.Sprintf("Has ded %d time%s.", c.Count, plural))
-	if c.Count == 1 {
+	comm.ToChat(msg.Channel, fmt.Sprintf("Has ded %d time%s.", count, plural))
+	if count == 1 {
 		time.Sleep(time.Millisecond * time.Duration(1000))
 		comm.ToChat(msg.Channel, "ONE TIME!")
 	}
+	comm.ToOverlay(fmt.Sprintf("ded %d", count))
 }
 
 func unlock() {
