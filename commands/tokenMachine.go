@@ -81,11 +81,13 @@ func (t *TokenMachine) Run(msg twitch.PrivateMessage) {
 			if len(args) < 3 {
 				return
 			}
-			amount, err := strconv.Atoi(args[2])
-			if err != nil {
+			r := struct{
+				Amount int
+			}{}
+			if result, err := CheckArgs(args[2:], 1, &r); err != nil || !result {
 				return
 			}
-			t.buyTokens(amount, &msg)
+			t.buyTokens(r.Amount, &msg)
 		case "balance":
 			t.checkBalance(&msg)
 		case "set":
