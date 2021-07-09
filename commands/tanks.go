@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/MattSwanson/burtbot/comm"
@@ -48,19 +47,27 @@ func (t *Tanks) Run(msg twitch.PrivateMessage) {
 		if len(args) < 4 {
 			return
 		}
-		angle, err := strconv.Atoi(args[2])
-		if err != nil || angle < 0 || angle > 360 {
+
+		r := struct{
+			Angle    int
+			Velocity float64
+		}{}
+		result, err := CheckArgs(args[2:], 2, &r)
+		if err != nil || !result{
+			return
+		}
+
+		if  r.Angle < 0 || r.Angle > 360 {
 			comm.ToChat(msg.Channel, "Invalid angle")
 			return
 		}
 
-		v, err := strconv.ParseFloat(args[3], 64)
-		if err != nil || v <= 0 {
+		if r.Velocity <= 0 {
 			comm.ToChat(msg.Channel, "Invalid velocity")
 			return
 		}
 
-		comm.ToOverlay(fmt.Sprintf("tanks shoot %s %d %.4f", msg.User.DisplayName, angle, v))
+		comm.ToOverlay(fmt.Sprintf("tanks shoot %s %d %.4f", msg.User.DisplayName, r.Angle, r.Velocity))
 	} else if args[1] == "begin" {
 		comm.ToOverlay("tanks begin")
 	}
