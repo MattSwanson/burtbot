@@ -1,9 +1,12 @@
 package commands
 
 import (
+	"context"
 	"fmt"
+	"math/rand"
 	"strings"
 	"strconv"
+	"time"
 	"encoding/json"
 
 	"github.com/MattSwanson/burtbot/comm"
@@ -15,7 +18,7 @@ type Plinko struct {
 }
 
 var plinko *Plinko = &Plinko{}
-
+var autoCancel context.CancelFunc
 func init() {
 	comm.SubscribeToReply("plinko", plinko.HandleResponse)
 	comm.SubscribeToReply("reset", plinko.Stop)
@@ -30,6 +33,33 @@ func (p *Plinko) Run(msg twitch.PrivateMessage) {
 	args := strings.Fields(strings.ToLower(msg.Message))
 	if len(args) < 2 {
 		return
+	}
+
+	if args[1] == "auto" && IsMod(msg.User) {
+		if autoCancel != nil {
+			autoCancel()
+			autoCancel = nil
+			return
+		}
+		var ctx context.Context
+		ctx, autoCancel = context.WithCancel(context.Background())
+		go func(ctx context.Context, user twitch.User, channel string){
+			for {
+				select {
+					case <-ctx.Done():
+						comm.ToChat(channel, "Stopping auto plinko")
+						return
+					default:
+						r := rand.Intn(5)
+						if GetTokenCount(user) <= 0 {
+							comm.ToChat(channel, "You're out of tokens, stopping auto plinko")
+							return
+						}
+						comm.ToOverlay(fmt.Sprintf("plinko drop %d %s %s", r, user.DisplayName, user.Color))
+				}
+				time.Sleep(time.Second * 5)
+			}
+		}(ctx, msg.User, msg.Channel)
 	}
 
 	if args[1] == "drop" && len(args) >= 3 {
