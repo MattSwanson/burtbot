@@ -13,8 +13,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"html/template"
+	"reflect"
+	"strconv"
 
 	"github.com/MattSwanson/burtbot/comm"
+	"github.com/MattSwanson/burtbot/helix"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
@@ -75,6 +78,7 @@ func RegisterCommand(pattern string, c Command) error {
 }
 
 func (handler *CmdHandler) PostInit() {
+	helix.SubscribeToFollowEvent(FollowAlertToOverlay)
 	for _, c := range handler.Commands {
 		c.PostInit()		
 	}
@@ -102,6 +106,14 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 	}
 	msg.Message = handler.InjectAliases(msg.Message)
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
+
+	if args[0] == "fakefollow" {
+		if len(args) < 2 {
+			return
+		}	
+		FollowAlertToOverlay(args[1])
+	}
+
 	lower := strings.ToLower(msg.Message)
 	if lower == "!help" {
 		handler.HelpAll()
@@ -271,4 +283,87 @@ func commandList(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+}
+
+func FollowAlertToOverlay(username string) {
+	comm.ToOverlay(fmt.Sprintf("newfollow %s", username))
+}
+
+// CheckArgs will check to make sure the args slice is at least the correct length
+// and that each item is the correct type
+func CheckArgs(args []string, count int, argStruct interface{}) (bool, error) {
+	// args is the args from the command string
+	// first check to see if the length checks out
+	if len(args) < count {
+		return false, nil
+	}
+
+	// We also need to make sure that the argStruct has the same number of elements
+	v := reflect.ValueOf(argStruct).Elem()
+	if v.NumField() != count {
+		return false, errors.New("number of args and fields in struct do not match")
+	}
+
+	// Step through the struct
+	for i := 0; i < count; i++ {
+		// Check the type expected in the struct
+		fieldValue := v.Field(i)
+		switch fieldValue.Kind() {
+			case reflect.Bool:
+				b, err := strconv.ParseBool(args[i])
+				if err != nil {
+					return false, nil
+				}
+				fieldValue.SetBool(b)
+			case reflect.Complex64, reflect.Complex128:
+				bitSize := 64
+				if fieldValue.Kind() == reflect.Complex128 {
+					bitSize = 128
+				}
+				c, err := strconv.ParseComplex(args[i], bitSize)
+				if err != nil {
+					return false, nil
+				}
+				fieldValue.SetComplex(c)
+			case reflect.Float32, reflect.Float64:
+				bitSize := 32
+				if fieldValue.Kind() == reflect.Float64 {
+					bitSize = 64
+				}
+				f, err := strconv.ParseFloat(args[i], bitSize)
+				if err != nil {
+					return false, nil
+				}
+				fieldValue.SetFloat(f)
+			case reflect.Int:
+				n, err := strconv.ParseInt(args[i], 10, 64)
+				if err != nil {
+					return false, nil
+				}
+				v.Field(i).SetInt(n)
+			case reflect.String:
+				fieldValue.SetString(args[i])
+			case reflect.Uint:
+				n, err := strconv.ParseUint(args[i], 10, 64)
+				if err != nil {
+					return false, nil
+				}
+				fieldValue.SetUint(n)
+			default:
+				return false, nil
+		}
+		// if the arg at that same index cannot be parsed to that type, return false
+		// if it can, store the parsed value in the field
+	}
+	return true, nil
+}
+
+// CheckArgsCB wraps CheckArgs and allows a callback function to passed in to be called
+// if the check fails
+func CheckArgsCB(args []string, count int, callback func(string), argStruct interface{}) (bool, error) {
+	if result, err := CheckArgs(args, count, argStruct); !result {
+		callback("not good")
+		return false, err 
+	}
+	return true, nil
 }
