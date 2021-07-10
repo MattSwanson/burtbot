@@ -2,6 +2,8 @@ package console
 
 import (
 	"fmt"
+	"os"
+	"strconv"
 	"log"
 	"github.com/lucasb-eyer/go-colorful"
 	"github.com/gempir/go-twitch-irc/v2"
@@ -25,8 +27,36 @@ type nonChatMessage struct {
 	ColorCode	int 
 }
 
+type ServiceStatus struct {
+	Spotify bool
+	Twitch bool
+	Overlay bool
+}
+
 //var chatMessages []twitch.PrivateMessage
 var chatMessages []interface{}
+var status ServiceStatus
+
+func SetServiceStatus(s ServiceStatus) {
+	status = s
+	displayMessages()
+}
+
+func SetSpotifyStatus(s bool) {
+	status.Spotify = s
+	displayMessages()
+}
+
+
+func SetTwitchStatus(s bool) {
+	status.Twitch = s
+	displayMessages()
+}
+
+func SetOverlayStatus(s bool) {
+	status.Overlay = s
+		displayMessages()
+	}
 
 func getColorEscapeCode(hexColor string) string {
 	colorCode := 34
@@ -115,6 +145,27 @@ func displayMessages() {
 		}
 
 	}
+
+	// Draw the status bar at the bottom of the screen... maybe?
+	spotifyStatusColor, twitchStatusColor, overlayStatusColor := Red, Red, Red
+	if status.Spotify {
+		spotifyStatusColor = Green
+	}
+	if status.Twitch {
+		twitchStatusColor =  Green
+	} 
+	if status.Overlay {
+		overlayStatusColor = Green
+	}
+	nColumns, _ := strconv.Atoi(os.Getenv("COLUMNS"))
+	nSpaces := nColumns - 35
+	// 35 columns for status text
+	fmt.Printf("\033[100;0H\033[48;5;238m     \033[%dmSpotify    \033[%dmTwitch    \033[%dmOverlay",
+		spotifyStatusColor, twitchStatusColor, overlayStatusColor)
+	for i := 0; i < nSpaces; i++ {
+		fmt.Print("-")
+	}
+	fmt.Printf("\033[0m\033[0G\033[1A")
 }
 
 func deleteMessageByMsgID(id string) {

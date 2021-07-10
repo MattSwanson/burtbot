@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/MattSwanson/burtbot/comm"
+	"github.com/MattSwanson/burtbot/console"
 	"github.com/gempir/go-twitch-irc/v2"
 	"github.com/zmb3/spotify"
 )
@@ -35,7 +36,7 @@ func (m *Music) PostInit() {
 	go func() {
 		http.HandleFunc("/spotify_authcb", completeAuth)
 		m.SpotifyClient = <-spotifyAuthCh
-		fmt.Println("Logged in to Spotify")
+		console.SetSpotifyStatus(true)
 	}()
 	mu = m
 }

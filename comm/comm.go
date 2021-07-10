@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/gempir/go-twitch-irc/v2"
+	"github.com/MattSwanson/burtbot/console"
 )
 
 var writeChannel chan string
@@ -60,7 +61,7 @@ func ConnectToOverlay() {
 	go notifySubscribers()
 	ctx, cancelPing := context.WithCancel(context.Background())
 	pingOverlay(ctx, writeChannel)
-	fmt.Println("Connected to overlay")
+	console.SetOverlayStatus(true)
 	for {
 		s := <-writeChannel
 		// fmt.Println(s)
@@ -68,6 +69,7 @@ func ConnectToOverlay() {
 		if err != nil {
 			// we know we have no connection, stop pinging until we reconnect
 			cancelPing()
+			console.SetOverlayStatus(false)
 			log.Println("Lost connection to overlay... will retry in 5 sec.")
 			readChannel <- "reset"
 			time.Sleep(time.Second * 5)

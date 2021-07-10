@@ -15,6 +15,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/MattSwanson/burtbot/console"
 )
 
 var twitchAuthCh chan bool
@@ -69,7 +71,7 @@ func Init() {
 		twitchAuthCh = make(chan bool)
 		
 		twitchAuth = <-twitchAuthCh
-		fmt.Println("Auth'd for twitch api")
+		console.SetTwitchStatus(true)
 		twitchAppAccessToken = getAppAccessToken()
 
 		// Get active eventsubs cancel them since they likely have an out of date callback url
@@ -78,7 +80,6 @@ func Init() {
 		for _, es := range eventSubs {
 			if es.Transport.Callback == os.Getenv("TWITCH_CALLBACK_URL") {
 				alreadySubbed = true
-				fmt.Println("Eventsub already active. Move along.")
 				continue
 			}
 			deleteSubscription(es.ID)
