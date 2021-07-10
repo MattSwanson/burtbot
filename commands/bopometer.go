@@ -1,23 +1,20 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"strconv"
 	"strings"
 	"time"
-	"sort"
 
 	"github.com/MattSwanson/burtbot/comm"
+	"github.com/MattSwanson/burtbot/db"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
 // here lies the bopometer...
 type Bopometer struct {
-	ratings      map[string]trackInfo // key is spotify track id
-	currentTrack trackInfo
+	currentTrack db.BopRating
 	hasBopped    map[string]bool // usernames
 	isBopping    bool
 }
@@ -29,13 +26,6 @@ type trackInfo struct {
 	Rating  float32
 }
 
-type tracks []trackInfo
-func (t tracks) Len() int { return len(t) }
-func (t tracks) Less(i, j int) bool { return t[i].Rating > t[j].Rating }
-func (t tracks) Swap(i, j int) {
-	t[i], t[j] = t[j], t[i]
-}
-
 const (
 	boppingWindow    = 25 // seconds
 	bopEndWaringTime = 5  // seconds
@@ -44,17 +34,7 @@ const (
 var bopometer *Bopometer = &Bopometer{}
 
 func init() {
-	bopometer.ratings = map[string]trackInfo{}
 	bopometer.hasBopped = map[string]bool{}
-	j, err := os.ReadFile("./ratings.json")
-	if err != nil {
-		log.Println("Couldn't load bopometer ratings info from file")
-	} else {
-		err = json.Unmarshal(j, &bopometer.ratings)
-		if err != nil {
-			log.Println("Invalid json in bops file")
-		}
-	}
 	comm.SubscribeToReply("bop", bopometer.Results)
 	SubscribeToRawMsg(bopometer.handleRawMessage)
 	RegisterCommand("bop", bopometer)
@@ -91,13 +71,25 @@ func (b *Bopometer) Run(msg twitch.PrivateMessage) {
 			b.isBopping = true
 			b.hasBopped[msg.User.Name] = true
 			comm.ToChat(msg.Channel, fmt.Sprintf("BOP BOP BOP @%s has started the bopometer! Spam BOP to bop", msg.User.DisplayName))
-			artists, _ := GetCurrentTrackArtists()
+			artistsSlice, _ := GetCurrentTrackArtists()
+			artists := ""
+			for i := 0; i < len(artistsSlice); i++ {
+				artists += artistsSlice[i]
+				if i < len(artistsSlice) -1 {
+					artists += ", "
+				}
+			}
 			song, _ := GetCurrentTrackTitle()
-			b.currentTrack = trackInfo{Name: song, Artists: artists, Rating: 1, ID: trackID}
+			b.currentTrack = db.BopRating{
+				SongName: song, 
+				SongArtists: artists,  
+				SpotifyID: trackID,
+				AddedAt: time.Now(),
+			}
 			comm.ToOverlay("bop start")
 			c := make(chan int)
 			go func(chan int) {
-				comm.ToChat(msg.Channel, fmt.Sprintf("Bopping has %d seconds left! !bop away!", <-c))
+				comm.ToChat(msg.Channel, fmt.Sprintf("Bopping has %d seconds left! BOP away!", <-c))
 			}(c)
 			go func(chan int) {
 				bopTimer(c)
@@ -111,26 +103,19 @@ func (b *Bopometer) Run(msg twitch.PrivateMessage) {
 		return
 	}
 	if len(args) == 2 && args[1] == "top" {
-		// get top bops
-		ts := tracks{}
-		for _, track := range b.ratings {
-			ts = append(ts, track)
+		ts, err := db.GetBopRatings(3)
+		if err != nil {
+			comm.ToChat(msg.Channel, "Can't get top bops at the moment. Try again some other time when it works.")
+			log.Println("couldn't get 3 bops: ", err)
+			return
 		}
-		sort.Sort(ts)
 		comm.ToChat(msg.Channel, "Top 3 BOPs:")
 		for i := 0; i < 3; i++ {
 			if i > len(ts) - 1 {
 				comm.ToChat(msg.Channel, fmt.Sprintf("%d: ???", i+1))
 				continue
 			}
-			artists := ""
-			for k, a := range ts[i].Artists {
-				artists += a
-				if k < len(artists) - 1 {
-					artists += ", "
-				}
-			}
-			comm.ToChat(msg.Channel, fmt.Sprintf("%d: %s by %s with a %.2f rating.", i+1, ts[i].Name, artists, ts[i].Rating))
+			comm.ToChat(msg.Channel, fmt.Sprintf("%d: %s by %s with a %.2f rating.", i+1, ts[i].SongName, ts[i].SongArtists, ts[i].Rating))
 		}
 	}
 }
@@ -138,17 +123,6 @@ func (b *Bopometer) Run(msg twitch.PrivateMessage) {
 // search rating by track / artist
 // top 3 or 5
 // 	- track title/artists and rating
-
-func (b *Bopometer) saveRatingsToFile() {
-	json, err := json.Marshal(b.ratings)
-	if err != nil {
-		log.Println("Couldn't json")
-		return
-	}
-	if err := os.WriteFile("./ratings.json", json, 0644); err != nil {
-		log.Println(err.Error())
-	}
-}
 
 func bopTimer(c chan int) {
 	ticker := time.NewTicker(time.Second)
@@ -170,7 +144,6 @@ func (b *Bopometer) GetBopping() bool {
 }
 
 func (b *Bopometer) AddBops(n int) {
-	//b.currentTrack.Rating += n
 	comm.ToOverlay(fmt.Sprintf("bop add %d", n))
 }
 
@@ -181,17 +154,20 @@ func (b *Bopometer) Results(args []string) {
 		log.Println("invalid bop result from overlay", err)
 	}
 	b.currentTrack.Rating = float32(res)
-	if track, exists := b.ratings[b.currentTrack.ID]; exists {
+	if track, _ := db.GetBopRating(b.currentTrack.SpotifyID); track.SpotifyID != "" {
 		if b.currentTrack.Rating > track.Rating {
-			comm.ToChat("burtstanton", fmt.Sprintf("%s has set a new record with a %.2f rating on the Bopometer!", track.Name, b.currentTrack.Rating))
-			b.ratings[b.currentTrack.ID] = b.currentTrack
+			comm.ToChat("burtstanton", fmt.Sprintf("%s has set a new record with a %.2f rating on the Bopometer!", track.SongName, b.currentTrack.Rating))
+			if err := db.UpdateBopRating(b.currentTrack.SpotifyID, b.currentTrack.Rating); err != nil {
+				log.Println("couldn't update bop rating in db: ", err)
+			}
 		}
 	} else {
-		comm.ToChat("burtstanton", fmt.Sprintf("%s registered a rating of %.2f on the Bopometer!", b.currentTrack.Name, b.currentTrack.Rating))
-		b.ratings[b.currentTrack.ID] = b.currentTrack
+		comm.ToChat("burtstanton", fmt.Sprintf("%s registered a rating of %.2f on the Bopometer!", b.currentTrack.SongName, b.currentTrack.Rating))
+		if err := db.AddBopRating(b.currentTrack); err != nil {
+			log.Println("couldn't add bop to db: ", err)
+		}
 	}
 	b.hasBopped = map[string]bool{}
-	b.saveRatingsToFile()
 }
 
 func (b *Bopometer) Help() []string {
