@@ -2,8 +2,6 @@ package console
 
 import (
 	"fmt"
-	"os"
-	"strconv"
 	"log"
 	"github.com/lucasb-eyer/go-colorful"
 	"github.com/gempir/go-twitch-irc/v2"
@@ -157,13 +155,13 @@ func displayMessages() {
 	if status.Overlay {
 		overlayStatusColor = Green
 	}
-	nColumns, _ := strconv.Atoi(os.Getenv("COLUMNS"))
-	nSpaces := nColumns - 35
+	//nColumns, _ := strconv.Atoi(os.Getenv("COLUMNS"))
+	//nSpaces := nColumns - 35
 	// 35 columns for status text
 	fmt.Printf("\033[100;0H\033[48;5;238m     \033[%dmSpotify    \033[%dmTwitch    \033[%dmOverlay",
 		spotifyStatusColor, twitchStatusColor, overlayStatusColor)
-	for i := 0; i < nSpaces; i++ {
-		fmt.Print("-")
+	for i := 0; i < 100; i++ {
+		fmt.Print(" ")
 	}
 	fmt.Printf("\033[0m\033[0G\033[1A")
 }
