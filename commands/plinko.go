@@ -80,13 +80,13 @@ func (p *Plinko) Run(msg twitch.PrivateMessage) {
 		if drop < 0 || drop > 4 {
 			return
 		}
-		DeductTokens(msg.User.Name, cost)
+		DeductTokens(msg.User.Name, uint64(cost))
 		comm.ToOverlay(fmt.Sprintf("plinko drop %s %s %s", args[2], msg.User.DisplayName, msg.User.Color))
 		return
 	}
 
 	if args[1] == "super" && len(args) >= 4 {
-		n, err := strconv.Atoi(args[3])
+		n, err := strconv.ParseUint(args[3], 10, 64)
 		if err != nil || n < 0 {
 			return
 		}
@@ -104,9 +104,8 @@ func (p *Plinko) Run(msg twitch.PrivateMessage) {
 }
 
 func (p *Plinko) HandleResponse(args []string) {
-	if n, err := strconv.Atoi(args[3]); err == nil {
+	if n, err := strconv.ParseUint(args[3], 10, 64); err == nil {
 		GrantToken(strings.ToLower(args[2]), n)
-
 		s := ""
 		if n > 0 {
 			plural := ""

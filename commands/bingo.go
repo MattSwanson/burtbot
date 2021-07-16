@@ -71,7 +71,7 @@ func (b *Bingo) Run(msg twitch.PrivateMessage) {
 				comm.ToChat(msg.Channel, fmt.Sprintf("@%s has Bingo! They win %d tokens!", msg.User.DisplayName, numTokens))
 				comm.ToOverlay(fmt.Sprintf("bingo winner %s %d", msg.User.DisplayName, numTokens))
 				// alot tokens to winrar
-				GrantToken(msg.User.DisplayName, numTokens)
+				GrantToken(msg.User.DisplayName, uint64(numTokens))
 				b.drawCancelFunc()
 				b.running = false
 				b.Start(msg.Channel)
