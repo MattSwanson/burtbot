@@ -23,7 +23,7 @@ func AddSuggestion(s Suggestion) (int, error) {
 	// in the users table
 	u, _ := GetUser(s.UserID)
 	if u.TwitchID == 0 {
-		err := AddUser(User{s.UserID, s.Username})
+		err := AddUser(User{s.UserID, s.Username, false})
 		if err != nil {
 			return 0, err
 		}

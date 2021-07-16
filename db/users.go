@@ -8,6 +8,7 @@ import (
 type User struct {
 	TwitchID int
 	DisplayName string
+	AutoShout bool
 }
 
 func GetUser(twitchID int) (User, error) {
@@ -53,9 +54,36 @@ func GetUsers() ([]User, error) {
 }
 
 func AddUser(user User) error {
-	_, err := DbPool.Exec(context.Background(), "INSERT INTO users (twitch_id, display_name) VALUES ($1, $2)", user.TwitchID, user.DisplayName)
+	_, err := DbPool.Exec(context.Background(), 
+	`	INSERT INTO users (twitch_id, display_name) 
+		VALUES ($1, $2)
+		ON CONFLICT (twitch_id)
+		DO UPDATE SET display_name = $2, auto_shout = $3
+		`, user.TwitchID, user.DisplayName, user.AutoShout)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func GetAutoShoutUsers() ([]User, error) {
+	users := []User{}
+	rows, err := DbPool.Query(context.Background(), "SELECT * FROM users WHERE auto_shout = true")
+	if err != nil {
+		return users, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		user := User{}
+		err := rows.Scan(&user.TwitchID, &user.DisplayName, &user.AutoShout)
+		if err != nil {
+			return []User{}, err
+		}
+		users = append(users, user)
+	}
+	if err = rows.Err(); err != nil {
+		return []User{}, err
+	}	
+	return users, nil
+	
 }
