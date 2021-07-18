@@ -11,6 +11,7 @@ import (
 
 var lastQuacksplosion time.Time
 var lastArrowMsg time.Time
+var lastTux time.Time
 var lastMessage string
 var lastMsg twitch.PrivateMessage 
 var schlorpLock = false
@@ -38,6 +39,13 @@ func secretCommands(msg twitch.PrivateMessage) {
 				comm.ToOverlay("quacksplosion")
 				lastQuacksplosion = time.Now()
 			}
+		}
+	}
+
+	if strings.Contains(lower, "tux") {
+		if time.Since(lastTux).Seconds() > 300 {
+			comm.ToOverlay("tux")
+			lastTux = time.Now()
 		}
 	}
 
