@@ -54,7 +54,8 @@ func (c *Cube) PostInit() {
 
 func (c *Cube) Help() []string {
 	return []string{
-		"!cube move [move string] to manipulate the cube",
+		"!cube move [move] to manipulate the cube",
+		"See https://ruwix.com/the-rubiks-cube/notation/ for move notation",
 	}
 }
 
