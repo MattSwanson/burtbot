@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"os"
 	"strconv"
@@ -118,8 +119,12 @@ func (t *TokenMachine) Run(msg twitch.PrivateMessage) {
 				fmt.Println(err)
 				return
 			}
-			if tokenCount := t.getTokenCount(msg.User); tokenCount < uint64(n) {
+			if tokenCount := t.getTokenCount(msg.User.DisplayName); tokenCount < uint64(n) {
 				comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you can't give that many tokens, you only have %d.", msg.User.DisplayName, tokenCount))
+				return
+			}
+			if math.MaxUint64 - t.getTokenCount(args[2]) <= n {
+				comm.ToChat(msg.Channel, fmt.Sprintf("@%s, No overflowing people token accounts...", msg.User.DisplayName))
 				return
 			}
 			DeductTokens(msg.User.DisplayName, n)
@@ -172,14 +177,14 @@ func (t *TokenMachine) saveTokensToFile() {
 }
 
 // Get a user's current token count
-func (t *TokenMachine) getTokenCount(user twitch.User) uint64 {
-	username := strings.ToLower(user.Name)
+func (t *TokenMachine) getTokenCount(username string) uint64 {
+	username = strings.ToLower(username)
 	// No one gets any tokens!!!!
 	return t.Tokens[username]
 }
 
 func GetTokenCount(user twitch.User) uint64 {
-	return tm.getTokenCount(user)
+	return tm.getTokenCount(user.DisplayName)
 }	
 
 func (t *TokenMachine) FollowReward(username string) {
@@ -213,7 +218,7 @@ func (t *TokenMachine) buyTokens(amount int, msg *twitch.PrivateMessage) {
 }
 
 func (t *TokenMachine) checkBalance(msg *twitch.PrivateMessage) {
-	n := t.getTokenCount(msg.User)
+	n := t.getTokenCount(msg.User.DisplayName)
 	if n == 0 {
 		comm.ToChat(msg.Channel, fmt.Sprintf(`@%s, Ya got NONE!`, msg.User.Name))
 		return
@@ -226,7 +231,7 @@ func (t *TokenMachine) checkBalance(msg *twitch.PrivateMessage) {
 }
 
 func (t *TokenMachine) distract(msg *twitch.PrivateMessage) {
-	if t.getTokenCount(msg.User) == 0 {
+	if t.getTokenCount(msg.User.DisplayName) == 0 {
 		comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you don't have anything to distract the Attendant with.", msg.User.DisplayName))
 		return
 	}
@@ -236,7 +241,7 @@ func (t *TokenMachine) distract(msg *twitch.PrivateMessage) {
 	}
 	t.lastDistract = time.Now()
 	t.attendantDistracted = true
-	t.setTokenCount(msg.User.DisplayName, uint64(t.getTokenCount(msg.User)-1))
+	t.setTokenCount(msg.User.DisplayName, uint64(t.getTokenCount(msg.User.DisplayName)-1))
 	comm.ToChat(msg.Channel, fmt.Sprintf("@%s throws a token into the back hallway.", msg.User.DisplayName))
 	comm.ToChat(msg.Channel, "The Attendant goes off to investigate the noise.")
 	comm.ToChat(msg.Channel, "Quick! The token machine is unattended, now would be a good check to try and get free tokens!")
