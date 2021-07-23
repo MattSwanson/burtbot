@@ -24,6 +24,7 @@ var burtCoin *BurtCoin = &BurtCoin{}
 type BurtCoin struct {
 	Wallets map[string]float64
 	Mining  map[string]context.CancelFunc
+	saveTimerCancel context.CancelFunc
 
 	lock sync.Mutex
 }
@@ -46,8 +47,24 @@ func (bc *BurtCoin) PostInit() {
 		}
 	}
 	burtCoin = bc
+	// spin up a ticker to save the wallets to a file every 5 seconds
+	ctx, cancel := context.WithCancel(context.Background())
+	bc.saveTimerCancel = cancel
+	go bc.startSaveTimer(ctx)
 	SubscribeUserPart(bc.OnUserPart)
 	SubscribeUserJoin(bc.OnUserJoin)
+}
+
+func (bc *BurtCoin) startSaveTimer(ctx context.Context) {
+	ticker := time.NewTicker(time.Second * 5)
+	for {
+		select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				bc.saveWalletsToFile()
+		}
+	}
 }
 
 func (bc *BurtCoin) Run(msg twitch.PrivateMessage) {
@@ -115,7 +132,6 @@ func (bc *BurtCoin) Give(giver twitch.User, recipient string, amount float64) bo
 	bc.lock.Lock()
 	bc.Wallets[recipient] += amount
 	bc.lock.Unlock()
-	bc.saveWalletsToFile()
 	return true
 }
 
@@ -127,7 +143,6 @@ func (bc *BurtCoin) Deduct(user twitch.User, amount float64) bool {
 	}
 	bc.Wallets[user.Name] -= amount
 	bc.lock.Unlock()
-	bc.saveWalletsToFile()
 	return true
 }
 
@@ -152,7 +167,6 @@ func (bc *BurtCoin) Mine(username string) bool {
 				bc.lock.Lock()
 				bc.Wallets[username] += miningAmount
 				bc.lock.Unlock()
-				bc.saveWalletsToFile()
 			}
 		}
 	}(ctx)
