@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"log"
+	"math/big"
 	"net/http"
 	"strings"
 
@@ -113,7 +114,7 @@ func (m *Music) Run(msg twitch.PrivateMessage) {
 	}
 
 	if args[1] == "skip" {
-		if GetTokenCount(msg.User) < skipCost {
+		if GetTokenCount(msg.User).Cmp(big.NewInt(skipCost)) == -1 {
 			comm.ToChat(msg.Channel, fmt.Sprintf("@%s you don't have enough tokens to skip this song. Deal with it.", msg.User.DisplayName))
 			return
 		}
@@ -125,14 +126,14 @@ func (m *Music) Run(msg twitch.PrivateMessage) {
 			return
 		}
 
-		DeductTokens(msg.User.DisplayName, skipCost)
+		DeductTokens(msg.User.DisplayName, big.NewInt(skipCost))
 		tokensLeft := GetTokenCount(msg.User)
 		plural := ""
-		if tokensLeft > 1 {
+		if tokensLeft.Cmp(big.NewInt(1)) == 1 {
 			plural = "s"
 		}
 		comm.ToChat(msg.Channel, fmt.Sprintf("Are you happy @%s? You skipped everyone's favorite song...", msg.User.DisplayName))
-		if tokensLeft > 0 {
+		if tokensLeft.Cmp(big.NewInt(0)) == 1 {
 			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, also, you only have %d token%s left", msg.User.DisplayName, GetTokenCount(msg.User), plural))
 		} else {
 			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, also, you have no tokens left. Sad.", msg.User.DisplayName))
@@ -142,7 +143,7 @@ func (m *Music) Run(msg twitch.PrivateMessage) {
 	}
 
 	if args[1] == "previous" {
-		if GetTokenCount(msg.User) < previousCost {
+		if GetTokenCount(msg.User).Cmp(big.NewInt(previousCost)) == -1 {
 			comm.ToChat(msg.Channel, fmt.Sprintf("@%s you don't have enough tokens to return to the past.", msg.User.DisplayName))
 			return
 		}
@@ -154,14 +155,14 @@ func (m *Music) Run(msg twitch.PrivateMessage) {
 			return
 		}
 
-		DeductTokens(msg.User.DisplayName, previousCost)
+		DeductTokens(msg.User.DisplayName, big.NewInt(previousCost))
 		tokensLeft := GetTokenCount(msg.User)
 		plural := ""
-		if tokensLeft > 1 {
+		if tokensLeft.Cmp(big.NewInt(1)) == 1 {
 			plural = "s"
 		}
 		comm.ToChat(msg.Channel, fmt.Sprintf("Okay @%s, I guess we have to go back to the last song.", msg.User.DisplayName))
-		if tokensLeft > 0 {
+		if tokensLeft.Cmp(big.NewInt(0)) == 1 {
 			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, also, you only have %d token%s left", msg.User.DisplayName, GetTokenCount(msg.User), plural))
 		} else {
 			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, also, you have no tokens left. Sad.", msg.User.DisplayName))
@@ -213,7 +214,7 @@ func GetCurrentTrackID() (string, bool) {
 // Put in a request for the music player from the given user for the given song link
 func (m Music) request(user twitch.User, song spotify.ID) (bool, string) {
 	numTokens := GetTokenCount(user)
-	if numTokens <= 0 {
+	if numTokens.Cmp(big.NewInt(0)) == -1 || numTokens.Cmp(big.NewInt(0)) == 0 {
 		return false, fmt.Sprintf("@%s you need a token to make a request. Get tokens from the token machine.", user.Name)
 	}
 
@@ -222,7 +223,7 @@ func (m Music) request(user twitch.User, song spotify.ID) (bool, string) {
 		return false, "There was an error queing the song - may be an invalid track id"
 	}
 
-	DeductTokens(user.DisplayName, 1)
+	DeductTokens(user.DisplayName, big.NewInt(1))
 
 	trackInfo, err := m.SpotifyClient.GetTrack(song)
 	if err != nil {

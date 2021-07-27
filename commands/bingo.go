@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"math/big"
 	"math/rand"
 	"net/http"
 	"strings"
@@ -71,7 +72,7 @@ func (b *Bingo) Run(msg twitch.PrivateMessage) {
 				comm.ToChat(msg.Channel, fmt.Sprintf("@%s has Bingo! They win %d tokens!", msg.User.DisplayName, numTokens))
 				comm.ToOverlay(fmt.Sprintf("bingo winner %s %d", msg.User.DisplayName, numTokens))
 				// alot tokens to winrar
-				GrantToken(msg.User.DisplayName, uint64(numTokens))
+				GrantToken(msg.User.DisplayName, big.NewInt(int64(numTokens)))
 				b.drawCancelFunc()
 				b.running = false
 				b.Start(msg.Channel)
@@ -96,14 +97,14 @@ func (b *Bingo) Run(msg twitch.PrivateMessage) {
 		}
 
 		// check to see if they have enough tokens
-		if !DeductTokens(msg.User.DisplayName, cardCost) {
+		if !DeductTokens(msg.User.DisplayName, big.NewInt(cardCost)) {
 			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, bingo cards cost %d tokens. You have only %d.", 
 				msg.User.DisplayName, cardCost, GetTokenCount(msg.User)))
 			return
 		}
 		url, err := b.userJoined(msg.User.DisplayName)
 		if err != nil {
-			GrantToken(msg.User.DisplayName, cardCost)
+			GrantToken(msg.User.DisplayName, big.NewInt(cardCost))
 			comm.ToChat(msg.Channel, fmt.Sprintf("Sorry @%s, couldn't get you resgistered. Try again later. Your tokens have been refunded.", msg.User.DisplayName))
 			return
 		}

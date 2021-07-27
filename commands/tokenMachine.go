@@ -4,10 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math"
+	"math/big"
 	"math/rand"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -18,13 +17,13 @@ import (
 
 const followRewardAmount = 100
 
-var tm *TokenMachine = &TokenMachine{Tokens: make(map[string]uint64)}
+var tm *TokenMachine = &TokenMachine{Tokens: make(map[string]*big.Int)}
 
 type TokenMachine struct {
 	lastKick            time.Time
 	lastDistract        time.Time
 	attendantDistracted bool
-	Tokens              map[string]uint64
+	Tokens              map[string]*big.Int
 	persist             bool
 }
 
@@ -41,7 +40,7 @@ const (
 func init() {
 	rand.Seed(time.Now().Unix())
 	// tokens init
-	tm.Tokens = make(map[string]uint64)
+	tm.Tokens = make(map[string]*big.Int)
 	tm.persist = true
 	j, err := os.ReadFile("./tokens.json")
 	if err != nil {
@@ -95,8 +94,10 @@ func (t *TokenMachine) Run(msg twitch.PrivateMessage) {
 			if !IsMod(msg.User) || len(args) < 4 {
 				return
 			}
-			n, err := strconv.ParseUint(args[3], 10, 64)
+			n := big.NewInt(0)
+			_, err := fmt.Sscan(args[3], n)
 			if err != nil {
+				comm.ToChat(msg.Channel, "Unable to set token amount. Invalid amount") 
 				return
 			}
 			t.setTokenCount(args[2], n)
@@ -104,8 +105,10 @@ func (t *TokenMachine) Run(msg twitch.PrivateMessage) {
 			if !IsMod(msg.User) || len(args) < 4 {
 				return
 			}
-			n, err := strconv.ParseUint(args[3], 10, 64)
+			n := big.NewInt(0)
+			_, err := fmt.Sscan(args[3], n)
 			if err != nil {
+				comm.ToChat(msg.Channel, "Unable to grant tokens. Invalid amount") 
 				return
 			}
 			t.GrantToken(strings.ToLower(args[2]), n)
@@ -114,17 +117,14 @@ func (t *TokenMachine) Run(msg twitch.PrivateMessage) {
 			if len(args) < 4 {
 				return
 			}
-			n, err := strconv.ParseUint(args[3], 10 , 64)
-			if err != nil || n <= 0 {
-				fmt.Println(err)
+			n := big.NewInt(0)
+			_, err := fmt.Sscan(args[3], n)
+			if err != nil {
+				comm.ToChat(msg.Channel, fmt.Sprintf("@%s, there was an error processing your request. Please try again in a moment.", msg.User.DisplayName))
 				return
 			}
-			if tokenCount := t.getTokenCount(msg.User.DisplayName); tokenCount < uint64(n) {
+			if tokenCount := t.getTokenCount(msg.User.DisplayName); n.Cmp(tokenCount) == -1 {
 				comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you can't give that many tokens, you only have %d.", msg.User.DisplayName, tokenCount))
-				return
-			}
-			if math.MaxUint64 - t.getTokenCount(args[2]) <= n {
-				comm.ToChat(msg.Channel, fmt.Sprintf("@%s, No overflowing people token accounts...", msg.User.DisplayName))
 				return
 			}
 			DeductTokens(msg.User.DisplayName, n)
@@ -134,31 +134,32 @@ func (t *TokenMachine) Run(msg twitch.PrivateMessage) {
 
 }
 
-func (t *TokenMachine) DeductTokens(username string, number uint64) bool {
+func (t *TokenMachine) DeductTokens(username string, number *big.Int) bool {
 	balance, _ := t.Tokens[strings.ToLower(username)]
-	if balance < uint64(number) {
+	if balance.Cmp(number) == -1 {
 		return false
 	}
-	t.Tokens[strings.ToLower(username)] = balance - uint64(number)
+	t.Tokens[strings.ToLower(username)].Sub(balance, number)
 	return true
 }
 
-func DeductTokens(username string, number uint64) bool {
+func DeductTokens(username string, number *big.Int) bool {
 	return tm.DeductTokens(username, number)
 }
 
-func (t *TokenMachine) GrantToken(username string, number uint64) {
-	t.Tokens[strings.ToLower(username)] += uint64(number)
+func (t *TokenMachine) GrantToken(username string, number *big.Int) {
+	cur := t.Tokens[strings.ToLower(username)]
+	cur.Add(cur, number)
 	if t.persist {
 		t.saveTokensToFile()
 	}
 }
 
-func GrantToken(username string, number uint64) {
+func GrantToken(username string, number *big.Int) {
 	tm.GrantToken(username, number)
 }
 
-func (t *TokenMachine) setTokenCount(userName string, number uint64) {
+func (t *TokenMachine) setTokenCount(userName string, number *big.Int) {
 	t.Tokens[strings.ToLower(userName)] = number
 	if t.persist {
 		t.saveTokensToFile()
@@ -177,20 +178,20 @@ func (t *TokenMachine) saveTokensToFile() {
 }
 
 // Get a user's current token count
-func (t *TokenMachine) getTokenCount(username string) uint64 {
+func (t *TokenMachine) getTokenCount(username string) *big.Int{
 	username = strings.ToLower(username)
 	// No one gets any tokens!!!!
 	return t.Tokens[username]
 }
 
-func GetTokenCount(user twitch.User) uint64 {
+func GetTokenCount(user twitch.User) *big.Int{
 	return tm.getTokenCount(user.DisplayName)
 }	
 
 func (t *TokenMachine) FollowReward(username string) {
 	s := fmt.Sprintf("Thanks for following @%s! Have %d tokens to spend on useless things...", username, followRewardAmount)
 	comm.ToChat("burtstanton", s)
-	t.GrantToken(username, followRewardAmount)
+	t.GrantToken(username, big.NewInt(followRewardAmount))
 }
 
 func (t *TokenMachine) buyTokens(amount int, msg *twitch.PrivateMessage) {
@@ -210,7 +211,8 @@ func (t *TokenMachine) buyTokens(amount int, msg *twitch.PrivateMessage) {
 	}
 
 	if DeductBurtcoin(msg.User, float64(amount)/float64(tokenRate)) {
-		t.GrantToken(strings.ToLower(msg.User.Name), uint64(amount))
+		b := big.NewInt(int64(amount))
+		t.GrantToken(strings.ToLower(msg.User.Name), b)
 		comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you received %d tokens for %d burtcoin. Thanks!", msg.User.DisplayName, amount, amount/tokenRate))
 	} else {
 		comm.ToChat(msg.Channel, fmt.Sprintf("@%s, unable to deduct funds from you burtcoin wallet. No tokens for you. Yet...", msg.User.DisplayName))
@@ -219,19 +221,23 @@ func (t *TokenMachine) buyTokens(amount int, msg *twitch.PrivateMessage) {
 
 func (t *TokenMachine) checkBalance(msg *twitch.PrivateMessage) {
 	n := t.getTokenCount(msg.User.DisplayName)
-	if n == 0 {
+	if n.Cmp(big.NewInt(0)) == 0 {
 		comm.ToChat(msg.Channel, fmt.Sprintf(`@%s, Ya got NONE!`, msg.User.Name))
 		return
 	}
 	plural := ""
-	if n > 1 {
+	if n.Cmp(big.NewInt(1)) == 1 {
 		plural = "s"
 	}
-	comm.ToChat(msg.Channel, fmt.Sprintf(`@%s, you have %d token%s. Use them wisely. Or not.`, msg.User.Name, n, plural))
+	str := fmt.Sprintf(`@%s, you have %d token%s. Use them wisely. Or not.`, msg.User.Name, n, plural)
+	if len(str) >= 500 {
+		comm.ToChat(msg.Channel, "too manu")
+	}
+	comm.ToChat(msg.Channel, str)
 }
 
 func (t *TokenMachine) distract(msg *twitch.PrivateMessage) {
-	if t.getTokenCount(msg.User.DisplayName) == 0 {
+	if t.getTokenCount(msg.User.DisplayName).Cmp(big.NewInt(0)) == 0 {
 		comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you don't have anything to distract the Attendant with.", msg.User.DisplayName))
 		return
 	}
@@ -241,7 +247,7 @@ func (t *TokenMachine) distract(msg *twitch.PrivateMessage) {
 	}
 	t.lastDistract = time.Now()
 	t.attendantDistracted = true
-	t.setTokenCount(msg.User.DisplayName, uint64(t.getTokenCount(msg.User.DisplayName)-1))
+	t.DeductTokens(msg.User.DisplayName, big.NewInt(1))
 	comm.ToChat(msg.Channel, fmt.Sprintf("@%s throws a token into the back hallway.", msg.User.DisplayName))
 	comm.ToChat(msg.Channel, "The Attendant goes off to investigate the noise.")
 	comm.ToChat(msg.Channel, "Quick! The token machine is unattended, now would be a good check to try and get free tokens!")
@@ -260,7 +266,7 @@ func (t *TokenMachine) kick(msg *twitch.PrivateMessage) {
 			comm.ToChat(msg.Channel, fmt.Sprintf("@%s you bad at kicking machine", msg.User.DisplayName))
 			return
 		}
-		t.GrantToken(strings.ToLower(msg.User.Name), 1)
+		t.GrantToken(strings.ToLower(msg.User.Name), big.NewInt(1))
 		comm.ToChat(msg.Channel, fmt.Sprintf("DING! @%s got a free token!", msg.User.DisplayName))
 		return
 	}
@@ -281,13 +287,13 @@ func (t *TokenMachine) kick(msg *twitch.PrivateMessage) {
 	}
 
 	if r < kickJackpotProbability {
-		t.GrantToken(strings.ToLower(msg.User.Name), jackpotAmount)
+		t.GrantToken(strings.ToLower(msg.User.Name), big.NewInt(jackpotAmount))
 		comm.ToChat(msg.Channel, fmt.Sprintf("WOW! @%s kicks the token machine and %d tokens fall from it's orifices.", msg.User.DisplayName, jackpotAmount))
 		comm.ToChat(msg.Channel, "They grab their bounty from the floor quickly and get away before The Attendent rushes over.")
 		return
 	}
 
-	t.GrantToken(strings.ToLower(msg.User.Name), 1)
+	t.GrantToken(strings.ToLower(msg.User.Name), big.NewInt(1))
 	comm.ToChat(msg.Channel, "You kick the token machine and a token falls into the tray.")
 	comm.ToChat(msg.Channel, "As you grab the token you notice the Attendant coming.")
 	comm.ToChat(msg.Channel, "You escape into the shadows with your request token.")

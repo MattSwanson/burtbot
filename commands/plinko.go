@@ -3,6 +3,8 @@ package commands
 import (
 	"context"
 	"fmt"
+	"log"
+	"math/big"
 	"math/rand"
 	"strings"
 	"strconv"
@@ -51,7 +53,8 @@ func (p *Plinko) Run(msg twitch.PrivateMessage) {
 						return
 					default:
 						r := rand.Intn(5)
-						if GetTokenCount(user) <= 0 {
+						tokenCount := GetTokenCount(user)
+						if tokenCount.Cmp(big.NewInt(0)) == -1 || tokenCount.Cmp(big.NewInt(0)) == 0 {
 							comm.ToChat(channel, "You're out of tokens, stopping auto plinko")
 							return
 						}
@@ -64,14 +67,14 @@ func (p *Plinko) Run(msg twitch.PrivateMessage) {
 
 	if args[1] == "drop" && len(args) >= 3 {
 		numTokens := GetTokenCount(msg.User)
-		if numTokens <= 0 {
+		if numTokens.Cmp(big.NewInt(0)) == -1 || numTokens.Cmp(big.NewInt(0)) == 0 {
 			comm.ToChat(msg.Channel, fmt.Sprintf("Sorry @%s, you have no tokens. Plinko costs 1 token per drop.", msg.User.DisplayName))
 			return
 		}
 		cost := 1
 		drop, err := strconv.Atoi(args[2])
 		if err != nil {
-			if args[2] == "all" && numTokens >= 5 {
+			if args[2] == "all" && numTokens.Cmp(big.NewInt(5)) == 1 || numTokens.Cmp(big.NewInt(5)) == 0 {
 				cost = 5
 			} else {
 				return
@@ -80,21 +83,23 @@ func (p *Plinko) Run(msg twitch.PrivateMessage) {
 		if drop < 0 || drop > 4 {
 			return
 		}
-		DeductTokens(msg.User.Name, uint64(cost))
+		DeductTokens(msg.User.Name, big.NewInt(int64(cost)))
 		comm.ToOverlay(fmt.Sprintf("plinko drop %s %s %s", args[2], msg.User.DisplayName, msg.User.Color))
 		return
 	}
 
 	if args[1] == "super" && len(args) >= 4 {
-		n, err := strconv.ParseUint(args[3], 10, 64)
-		if err != nil || n < 0 {
+		n := big.NewInt(0)
+		_, err := fmt.Sscan(args[3], n)
+		if err != nil {
+			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, invalid token amount. Please try again", msg.User.DisplayName))
 			return
 		}
 		drop, err := strconv.Atoi(args[2])
 		if err != nil || drop < 0 || drop > 4 {
 			return
 		}
-		if count := GetTokenCount(msg.User); count < n {
+		if count := GetTokenCount(msg.User); count.Cmp(n) == -1 {
 			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you only have %d tokens. Can't wager %d.", msg.User.DisplayName, count, n))
 			return
 		}
@@ -104,29 +109,33 @@ func (p *Plinko) Run(msg twitch.PrivateMessage) {
 }
 
 func (p *Plinko) HandleResponse(args []string) {
-	if n, err := strconv.ParseUint(args[3], 10, 64); err == nil {
-		GrantToken(strings.ToLower(args[2]), n)
-		s := ""
-		if n > 0 {
-			plural := ""
-			if n > 1 {
-				plural = "s"
-			}
-			s = fmt.Sprintf("@%s won %d token%s!", args[2], n, plural)
-		} else {
-			s = fmt.Sprintf("@%s, YOU GET NOTHING! GOOD DAY!", args[2])
-		}
-		//comm.ToChat("burtstanton", s)
-		mMsg := MarqueeMsg{
-			RawMessage: s,
-			Emotes:     "",
-		}
-		json, err := json.Marshal(mMsg)
-		if err != nil {
-			return
-		}
-		comm.ToOverlay("marquee once " + string(json))
+	n := big.NewInt(0)
+	_, err := fmt.Sscan(args[3], n)
+	if err != nil {
+		log.Println("Couldn't parse number from overlay response", err)
+		return
 	}
+	GrantToken(strings.ToLower(args[2]), n)
+	s := ""
+	if n.Cmp(big.NewInt(0)) == 1 {
+		plural := ""
+		if n.Cmp(big.NewInt(1)) == 1 {
+			plural = "s"
+		}
+		s = fmt.Sprintf("@%s won %d token%s!", args[2], n, plural)
+	} else {
+		s = fmt.Sprintf("@%s, YOU GET NOTHING! GOOD DAY!", args[2])
+	}
+	//comm.ToChat("burtstanton", s)
+	mMsg := MarqueeMsg{
+		RawMessage: s,
+		Emotes:     "",
+	}
+	json, err := json.Marshal(mMsg)
+	if err != nil {
+		return
+	}
+	comm.ToOverlay("marquee once " + string(json))
 }
 
 func (p *Plinko) Stop(args []string) {
