@@ -1,6 +1,8 @@
 package web
 
 import (
+	"log"
+	"net"
 	"net/http"
 	"strings"
 	"os"
@@ -11,10 +13,18 @@ import (
 )
 
 var templates *template.Template
-
+var localIP string
 
 func init() {
 	templates = template.Must(template.ParseGlob("templates/*"))
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+	ipstr := conn.LocalAddr().(*net.UDPAddr).String()
+	split := strings.Split(ipstr, ":")
+	localIP = split[0]
 }
 
 
@@ -60,7 +70,8 @@ func AuthHandleFunc(pattern string, handlerFunc func(http.ResponseWriter, *http.
 // this point
 func authenticateRequest(r *http.Request) bool {
 	remote := strings.Split(r.RemoteAddr, ":")
-	if remote[0] != os.Getenv("OVERLAY_IP") {
+	if remote[0] != os.Getenv("OVERLAY_IP") &&
+	   remote[0] != localIP {
 		return false
 	}
 	return true
