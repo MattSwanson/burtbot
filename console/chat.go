@@ -160,7 +160,7 @@ func displayMessages() {
 	// 35 columns for status text
 	fmt.Printf("\033[100;0H\033[48;5;238m     \033[%dmSpotify    \033[%dmTwitch    \033[%dmOverlay",
 		spotifyStatusColor, twitchStatusColor, overlayStatusColor)
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 18; i++ {
 		fmt.Print(" ")
 	}
 	fmt.Printf("\033[0m\033[0G\033[1A")
