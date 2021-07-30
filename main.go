@@ -19,13 +19,21 @@ var handler *commands.CmdHandler
 var client *twitch.Client
 var serviceAuthStatus *ServiceAuthStatus
 var servicePageTpl *template.Template
+var logFile *os.File
 
 func init() {
 	servicePageTpl = template.Must(template.ParseFiles("templates/serviceAuthPage.gohtml"))
+	var err error
+	logFile, err = os.OpenFile("bb_log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal("couldn't open log file for writting")
+	}
+	log.SetFlags(log.Ldate|log.Ltime|log.Lshortfile)
+	log.SetOutput(logFile)
 }
 
 func main() {
-
+	defer logFile.Close()
 	go comm.ConnectToOverlay()
 
 	// init db connection
@@ -34,7 +42,7 @@ func main() {
 		log.Fatalln("failed to connect to db: ", err)
 	}
 	defer closeDb()
-
+	
 	client = twitch.NewClient("burtbot11", os.Getenv("BURTBOT_TWITCH_KEY"))
 	client.OnPrivateMessage(handleMessage)
 	client.OnUserPartMessage(handleUserPart)
