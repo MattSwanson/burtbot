@@ -49,6 +49,14 @@ func secretCommands(msg twitch.PrivateMessage) {
 		}
 	}
 
+	if strings.HasPrefix(lower, "!real") {
+		args := strings.Fields(msg.Message)
+		if len(args) != 2 {
+			return
+		}
+		comm.ToChat(msg.Channel, fmt.Sprintf("%s is the only real language", args[1]))
+	}
+
 	if strings.ToLower(msg.User.DisplayName) == "velusip" {
 	/*	if time.Since(lastArrowMsg).Seconds() > 21600 {
 			comm.ToChat(msg.Channel, " Arrow keys all day -> -> -> -> -> -> -> -> -> -> -> ")
