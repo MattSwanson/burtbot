@@ -25,6 +25,9 @@ func (cs *Cowsay) Run(msg twitch.PrivateMessage) {
 		return
 	}
 	str := strings.Join(args[1:], " ")
+	if strings.HasPrefix(str, "-") {
+		return
+	}
 	cmd := exec.Command("cowsay", str)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
