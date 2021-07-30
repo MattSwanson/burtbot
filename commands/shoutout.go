@@ -53,12 +53,10 @@ func (s *Shoutout) Run(msg twitch.PrivateMessage) {
 		return
 	}
 	if len(args) == 3 && args[1] == "as" && IsMod(msg.User) {
-		// add to auto shouts
 		addToAutoShout(args[2], msg.Channel)
 		return
 	}
 	if len(args) == 3 && args[1] == "remove" && IsMod(msg.User) {
-		// add to auto shouts
 		removeAutoShout(args[2], msg.Channel)
 	}
 }
