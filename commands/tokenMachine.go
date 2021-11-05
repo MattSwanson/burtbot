@@ -123,7 +123,7 @@ func (t *TokenMachine) Run(msg twitch.PrivateMessage) {
 				comm.ToChat(msg.Channel, fmt.Sprintf("@%s, there was an error processing your request. Please try again in a moment.", msg.User.DisplayName))
 				return
 			}
-			if tokenCount := t.getTokenCount(msg.User.DisplayName); n.Cmp(tokenCount) == -1 {
+			if tokenCount := t.getTokenCount(msg.User.DisplayName); n.Cmp(tokenCount) <= 0 {
 				comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you can't give that many tokens, you only have %d.", msg.User.DisplayName, tokenCount))
 				return
 			}
@@ -149,6 +149,9 @@ func DeductTokens(username string, number *big.Int) bool {
 
 func (t *TokenMachine) GrantToken(username string, number *big.Int) {
 	cur := t.Tokens[strings.ToLower(username)]
+	if cur == nil {
+		cur = big.NewInt(0)
+	}
 	cur.Add(cur, number)
 	if t.persist {
 		t.saveTokensToFile()
@@ -231,7 +234,16 @@ func (t *TokenMachine) checkBalance(msg *twitch.PrivateMessage) {
 	}
 	str := fmt.Sprintf(`@%s, you have %d token%s. Use them wisely. Or not.`, msg.User.Name, n, plural)
 	if len(str) >= 500 {
-		comm.ToChat(msg.Channel, "too manu")
+		amt := n.String()
+		comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you have: ", msg.User.DisplayName))
+		for i := 0; i < len(amt); i += 499 {
+			if i + 499 >= len(amt) {
+				comm.ToChat(msg.Channel, amt[i:])
+			} else {
+				comm.ToChat(msg.Channel, amt[i:i+500])
+			}
+		}
+		comm.ToChat(msg.Channel, "tokens.")
 	}
 	comm.ToChat(msg.Channel, str)
 }
