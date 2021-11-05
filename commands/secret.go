@@ -2,30 +2,45 @@ package commands
 
 import (
 	"fmt"
-	"time"
+	"math/rand"
 	"strings"
+	"time"
 
 	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
 var lastQuacksplosion time.Time
+var lastMK time.Time
 var lastArrowMsg time.Time
+var lastMiracle time.Time
 var lastTux time.Time
 var lastMessage string
-var lastMsg twitch.PrivateMessage 
+var lastMsg twitch.PrivateMessage
 var schlorpLock = false
 var schlorpCD = 10
 
 func init() {
 	SubscribeToRawMsg(secretCommands)
 }
+
 // Parse raw message here for secret commands
 // Don't edit these on stream...
 func secretCommands(msg twitch.PrivateMessage) {
-	
-	if msg.User.DisplayName == "tundragaminglive" {
+
+	if msg.User.DisplayName == "tundragaminglive" &&
+		time.Since(lastMiracle).Seconds() > 21600 {
 		comm.ToOverlay("miracle")
+		lastMiracle = time.Now()
+	}
+
+	name := strings.ToLower(msg.User.DisplayName)
+	if name == "somecodingguy" &&
+		time.Since(lastMK).Seconds() > 21600 {
+		if rand.Intn(1000) >= 900 {
+			comm.ToOverlay("mk")
+			lastMK = time.Now()
+		}
 	}
 
 	lower := strings.ToLower(msg.Message)
@@ -58,7 +73,7 @@ func secretCommands(msg twitch.PrivateMessage) {
 	}
 
 	if strings.ToLower(msg.User.DisplayName) == "velusip" {
-	/*	if time.Since(lastArrowMsg).Seconds() > 21600 {
+		/*	if time.Since(lastArrowMsg).Seconds() > 21600 {
 			comm.ToChat(msg.Channel, " Arrow keys all day -> -> -> -> -> -> -> -> -> -> -> ")
 			comm.ToOverlay("tts true For absolutely no reason, everyone hold down your right arrow key for a very long time")
 			m := MarqueeMsg{
@@ -66,7 +81,7 @@ func secretCommands(msg twitch.PrivateMessage) {
 			}
 			j, err := json.Marshal(m)
 			if err != nil {
-				return	
+				return
 			}
 			comm.ToOverlay(fmt.Sprintf("marquee once %s", string(j)))
 			lastArrowMsg = time.Now()
