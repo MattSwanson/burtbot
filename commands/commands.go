@@ -15,6 +15,7 @@ import (
 	"html/template"
 	"reflect"
 	"strconv"
+	"time"
 
 	"github.com/MattSwanson/burtbot/comm"
 	"github.com/MattSwanson/burtbot/helix"
@@ -23,6 +24,7 @@ import (
 
 const (
 	aliasesFileName = "./aliases.json"
+	helpAllCooldown = 300 // seconds
 )
 
 var cmdHandler *CmdHandler = &CmdHandler{Commands: make(map[string]Command)}
@@ -30,6 +32,7 @@ var onPartSubscriptions []func(twitch.UserPartMessage)
 var onJoinSubscriptions []func(twitch.UserJoinMessage)
 var rawMsgSubscriptions []func(twitch.PrivateMessage)
 var helpTemplate *template.Template
+var lastHelpAll time.Time
 
 type Command interface {
 	Run(twitch.PrivateMessage)
@@ -116,7 +119,7 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 
 	lower := strings.ToLower(msg.Message)
 	if lower == "!help" {
-		handler.HelpAll()
+		handler.HelpAll(msg.Channel)
 	}
 	fields := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
 	if IsMod(msg.User) && fields[0] == "alias" {
@@ -178,7 +181,12 @@ func IsMod(user twitch.User) bool {
 
 // Show all the commands help text.. all of them... at once.
 // Or say them all????
-func (handler *CmdHandler) HelpAll() {
+func (handler *CmdHandler) HelpAll(channel string) {
+	if time.Since(lastHelpAll).Seconds() < helpAllCooldown {
+		comm.ToChat(channel, "Sorry, I've helped as much as I can for a little while.")
+		return
+	}
+	lastHelpAll = time.Now()
 	for _, cmd := range handler.Commands {
 		for _, h := range cmd.Help() {
 			comm.ToOverlay(fmt.Sprintf("tts true %s", h))
