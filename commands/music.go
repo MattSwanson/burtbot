@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/MattSwanson/burtbot/comm"
 	"github.com/MattSwanson/burtbot/console"
@@ -24,10 +25,12 @@ var spotifyAuth = spotify.NewAuthenticator("https://burtbot.app/spotify_authcb",
 	spotify.ScopeUserReadPrivate,
 	spotify.ScopeUserReadCurrentlyPlaying,
 	spotify.ScopeUserReadRecentlyPlayed,
+	spotify.ScopeUserReadPlaybackState,
 	spotify.ScopeUserModifyPlaybackState)
 var spotifyAuthCh = make(chan *spotify.Client)
 var spotifyState = "test123"
 var mu *Music = &Music{}
+var nowPlaying string
 
 func init() {
 	RegisterCommand("music", mu)
@@ -38,6 +41,33 @@ func (m *Music) PostInit() {
 		http.HandleFunc("/spotify_authcb", completeAuth)
 		m.SpotifyClient = <-spotifyAuthCh
 		console.SetSpotifyStatus(true)
+		go func() {
+			for {
+				playerState, err := m.SpotifyClient.PlayerState()
+				// Need to check if the current track is nil also
+				if err != nil || playerState.CurrentlyPlaying.Item == nil {
+					time.Sleep(2000 * time.Millisecond)
+					continue
+				}
+				if !playerState.CurrentlyPlaying.Playing {
+					if nowPlaying != "" {
+						nowPlaying = ""
+						comm.ToOverlay("nowplaying off")
+					}
+				} else {
+					track, playing := m.getCurrentTrackTitle()
+					if playing && track != "" {
+						artists, _ := m.getCurrentTrackArtists()
+						track = fmt.Sprintf("%s - %s", track, strings.Join(artists, ", "))
+						if track != nowPlaying {
+							nowPlaying = track
+							comm.ToOverlay(fmt.Sprintf("nowplaying %s", nowPlaying))
+						}
+					}
+				}
+				time.Sleep(2000 * time.Millisecond)
+			}
+		}()
 	}()
 	mu = m
 }
@@ -176,7 +206,11 @@ func (m *Music) getCurrentTrackTitle() (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	return cp.Item.Name, true
+	trackTitle := ""
+	if cp != nil {
+		trackTitle = cp.Item.Name
+	}
+	return trackTitle, true
 }
 
 func GetCurrentTrackTitle() (string, bool) {
@@ -185,7 +219,7 @@ func GetCurrentTrackTitle() (string, bool) {
 
 func (m *Music) getCurrentTrackArtists() ([]string, bool) {
 	cp, err := m.SpotifyClient.PlayerCurrentlyPlaying()
-	if err != nil {
+	if err != nil || cp.Item == nil {
 		return []string{}, false
 	}
 	artists := []string{}
@@ -255,11 +289,11 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 	// use the token to get an authenticated client
 	client := spotifyAuth.NewClient(tok)
 	spotifyAuthCh <- &client
-	http.Redirect(w, r, "https://burtbot.app/services_auth", http.StatusSeeOther)	
+	http.Redirect(w, r, "https://burtbot.app/services_auth", http.StatusSeeOther)
 }
 
 func GetSpotifyAuthStatus() bool {
-	return mu.SpotifyClient != nil 
+	return mu.SpotifyClient != nil
 }
 
 func GetSpotifyLink() string {
@@ -279,5 +313,5 @@ func (m Music) Help() []string {
 }
 
 func IsLoggedInToSpotify() bool {
-	return mu.SpotifyClient != nil 
+	return mu.SpotifyClient != nil
 }
