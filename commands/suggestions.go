@@ -2,19 +2,18 @@ package commands
 
 import (
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-	"html/template"
 
-	"github.com/gempir/go-twitch-irc/v2"
 	"github.com/MattSwanson/burtbot/comm"
 	"github.com/MattSwanson/burtbot/db"
 	"github.com/MattSwanson/burtbot/web"
+	"github.com/gempir/go-twitch-irc/v2"
 )
-
 
 type SuggestionBox struct {
 	Suggestions []db.Suggestion
@@ -114,7 +113,7 @@ func showAll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Am teapot", http.StatusTeapot)
 		return
 	}
-	tpl.ExecuteTemplate(w, "suggestions.gohtml", suggs) 
+	tpl.ExecuteTemplate(w, "suggestions.gohtml", suggs)
 }
 
 func deleteSuggestion(w http.ResponseWriter, r *http.Request) {
@@ -123,13 +122,13 @@ func deleteSuggestion(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	
+
 	err = db.DeleteSuggestion(id)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	
+
 	http.Redirect(w, r, "https://burtbot.app/suggestions", http.StatusSeeOther)
 }
 
@@ -139,7 +138,7 @@ func markComplete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	
+
 	err = db.SetSuggestionCompletion(id, true)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)

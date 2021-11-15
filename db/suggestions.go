@@ -2,16 +2,16 @@ package db
 
 import (
 	"context"
-	"time"
 	"sync"
+	"time"
 )
 
 var suggestionLock sync.Mutex = sync.Mutex{}
 
 type Suggestion struct {
-	ID		 int
+	ID       int
 	Username string
-	UserID	 int
+	UserID   int
 	Date     time.Time
 	Text     string
 	Complete bool
@@ -27,11 +27,11 @@ func AddSuggestion(s Suggestion) (int, error) {
 		if err != nil {
 			return 0, err
 		}
-	}	
+	}
 	suggestionLock.Lock()
 	defer suggestionLock.Unlock()
 	_, err := DbPool.Exec(context.Background(),
-	`INSERT INTO suggestions (suggestion, user_id, submitted_on)
+		`INSERT INTO suggestions (suggestion, user_id, submitted_on)
 	 VALUES ($1, $2, $3)`, s.Text, s.UserID, s.Date)
 	if err != nil {
 		return 0, err
@@ -41,7 +41,7 @@ func AddSuggestion(s Suggestion) (int, error) {
 		 ORDER BY ID desc
 		 LIMIT 1`)
 	if err != nil {
-		return 0, err 
+		return 0, err
 	}
 	defer row.Close()
 	id := 0
@@ -56,7 +56,7 @@ func AddSuggestion(s Suggestion) (int, error) {
 
 func GetSuggestions() ([]Suggestion, error) {
 	suggestions := []Suggestion{}
-	rows, err := DbPool.Query(context.Background(), 
+	rows, err := DbPool.Query(context.Background(),
 		`SELECT
 		  suggestions.id,
 		  suggestions.user_id,
@@ -88,17 +88,17 @@ func GetSuggestions() ([]Suggestion, error) {
 
 func DeleteSuggestion(id int) error {
 	_, err := DbPool.Exec(context.Background(),
-	`DELETE FROM suggestions 
+		`DELETE FROM suggestions 
 	 WHERE id = $1`,
-	 id)
+		id)
 	return err
 }
 
 func SetSuggestionCompletion(id int, b bool) error {
 	_, err := DbPool.Exec(context.Background(),
-	`UPDATE suggestions
+		`UPDATE suggestions
 	 SET complete = $1
 	 WHERE id = $2`,
-	b, id)
+		b, id)
 	return err
 }

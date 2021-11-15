@@ -6,18 +6,18 @@ import (
 )
 
 type BopRating struct {
-	SpotifyID string
-	SongName string
+	SpotifyID   string
+	SongName    string
 	SongArtists string
-	Rating float32
-	AddedAt time.Time
+	Rating      float32
+	AddedAt     time.Time
 }
 
 // Doesn't return an insert ID since the song id will be
 // the unique key
-func AddBopRating(b BopRating) (error) {
+func AddBopRating(b BopRating) error {
 	_, err := DbPool.Exec(context.Background(),
-	`INSERT INTO bopometer_ratings (spotify_id, song_name, song_artists, rating, added_at)
+		`INSERT INTO bopometer_ratings (spotify_id, song_name, song_artists, rating, added_at)
 	 VALUES ($1, $2, $3, $4, $5)`, b.SpotifyID, b.SongName, b.SongArtists, b.Rating, b.AddedAt)
 	return err
 }
@@ -25,7 +25,7 @@ func AddBopRating(b BopRating) (error) {
 func GetBopRatings(limit int) ([]BopRating, error) {
 	ratings := []BopRating{}
 	rows, err := DbPool.Query(context.Background(),
-	`SELECT * FROM bopometer_ratings
+		`SELECT * FROM bopometer_ratings
 	 ORDER BY rating DESC
 	 LIMIT $1`, limit)
 	if err != nil {
@@ -48,11 +48,11 @@ func GetBopRatings(limit int) ([]BopRating, error) {
 
 func GetBopRating(spotifyID string) (BopRating, error) {
 	row := DbPool.QueryRow(context.Background(),
-	`SELECT * FROM bopometer_ratings
+		`SELECT * FROM bopometer_ratings
 	 WHERE spotify_id = $1`, spotifyID)
 	br := BopRating{}
 	err := row.Scan(&br.SpotifyID, &br.SongName, &br.SongArtists,
-					&br.Rating, &br.AddedAt)
+		&br.Rating, &br.AddedAt)
 	if err != nil {
 		return BopRating{}, err
 	}
@@ -61,7 +61,7 @@ func GetBopRating(spotifyID string) (BopRating, error) {
 
 func UpdateBopRating(trackID string, rating float32) error {
 	_, err := DbPool.Exec(context.Background(),
-	`UPDATE bopometer_ratings 
+		`UPDATE bopometer_ratings 
 	 SET rating = $1, added_at = $2
 	 WHERE spotify_id = $3`, rating, time.Now(), trackID)
 	return err

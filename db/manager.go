@@ -1,15 +1,16 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"context"
+
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 var DbPool *pgxpool.Pool
 
-// Connect will establish a connection to the pgql database based on the 
+// Connect will establish a connection to the pgql database based on the
 // connection string stored in the env var PG_URL. Make sure to defer
 // db.Close() to ensure proper closure of the pool
 func Connect() (error, func()) {
@@ -18,7 +19,7 @@ func Connect() (error, func()) {
 	if err != nil {
 		return err, nil
 	}
-	return nil, func(){
+	return nil, func() {
 		if DbPool != nil {
 			DbPool.Close()
 		}
