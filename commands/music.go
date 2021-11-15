@@ -199,6 +199,16 @@ func (m *Music) Run(msg twitch.PrivateMessage) {
 		}
 		return
 	}
+
+	if args[1] == "nptext" && IsMod(msg.User) {
+		if len(args) < 3 {
+			return
+		}
+
+		if args[2] == "top" || args[2] == "bottom" {
+			comm.ToOverlay(fmt.Sprintf("nptext %s", args[2]))
+		}
+	}
 }
 
 func (m *Music) getCurrentTrackTitle() (string, bool) {
