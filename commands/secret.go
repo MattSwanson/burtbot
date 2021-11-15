@@ -37,7 +37,7 @@ func secretCommands(msg twitch.PrivateMessage) {
 	name := strings.ToLower(msg.User.DisplayName)
 	if name == "somecodingguy" &&
 		time.Since(lastMK).Seconds() > 21600 {
-		if rand.Intn(1000) >= 900 {
+		if rand.Intn(1000) >= 975 {
 			comm.ToOverlay("mk")
 			lastMK = time.Now()
 		}
@@ -55,6 +55,10 @@ func secretCommands(msg twitch.PrivateMessage) {
 				lastQuacksplosion = time.Now()
 			}
 		}
+	}
+
+	if strings.Contains(lower, "moo") || strings.Contains(lower, "cow") {
+		comm.ToOverlay("moo")
 	}
 
 	if strings.Contains(lower, "tux") {
