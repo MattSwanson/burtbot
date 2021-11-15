@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Suggestion Box</title>
+    <style>
+        body {
+            font-family: monospace;
+            background-color: #333;
+        }
+        h1, ul {
+            color: slategrey;
+        }
+        a {
+            color: darkkhaki;
+        }
+        
+    </style>
+</head>
+
+<body>
+    <h1>Unfound</h1>
+    <ul>    
+    {{ range .Unfound }}
+    <li><strong>{{ .BaseItem }}</strong> - <a href="/found?id={{ .ID }}">{{ .Name }}</a></li>
+    {{ end }}
+    </ul>
+
+    <h1>Last 5 finds</h1>
+    <ul>
+        {{ range .Recent }}
+        <li><a href="/unfound?id={{ .ID }}">{{ .Name }}</a> {{ .Found }} </li>
+        {{ end }}
+    </ul>
+</body>
+</html>
