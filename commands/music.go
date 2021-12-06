@@ -245,7 +245,7 @@ func GetCurrentTrackArtists() ([]string, bool) {
 
 func (m *Music) getCurrentTrackID() (string, bool) {
 	cp, err := m.SpotifyClient.PlayerCurrentlyPlaying()
-	if err != nil {
+	if err != nil || cp.Item == nil {
 		return "", false
 	}
 	return string(cp.Item.ID.String()), true

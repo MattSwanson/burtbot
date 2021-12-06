@@ -62,7 +62,7 @@ func (b *Bopometer) Run(msg twitch.PrivateMessage) {
 
 		if !b.isBopping {
 			trackID, isPlaying := GetCurrentTrackID()
-			if !isPlaying {
+			if !isPlaying || trackID == "" {
 				comm.ToChat(msg.Channel, "No track is currently playing.")
 				return
 			}
@@ -75,16 +75,16 @@ func (b *Bopometer) Run(msg twitch.PrivateMessage) {
 			artists := ""
 			for i := 0; i < len(artistsSlice); i++ {
 				artists += artistsSlice[i]
-				if i < len(artistsSlice) -1 {
+				if i < len(artistsSlice)-1 {
 					artists += ", "
 				}
 			}
 			song, _ := GetCurrentTrackTitle()
 			b.currentTrack = db.BopRating{
-				SongName: song, 
-				SongArtists: artists,  
-				SpotifyID: trackID,
-				AddedAt: time.Now(),
+				SongName:    song,
+				SongArtists: artists,
+				SpotifyID:   trackID,
+				AddedAt:     time.Now(),
 			}
 			comm.ToOverlay("bop start")
 			c := make(chan int)
@@ -111,7 +111,7 @@ func (b *Bopometer) Run(msg twitch.PrivateMessage) {
 		}
 		comm.ToChat(msg.Channel, "Top 3 BOPs:")
 		for i := 0; i < 3; i++ {
-			if i > len(ts) - 1 {
+			if i > len(ts)-1 {
 				comm.ToChat(msg.Channel, fmt.Sprintf("%d: ???", i+1))
 				continue
 			}
