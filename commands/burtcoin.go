@@ -22,8 +22,8 @@ const (
 var burtCoin *BurtCoin = &BurtCoin{}
 
 type BurtCoin struct {
-	Wallets map[string]float64
-	Mining  map[string]context.CancelFunc
+	Wallets         map[string]float64
+	Mining          map[string]context.CancelFunc
 	saveTimerCancel context.CancelFunc
 
 	lock sync.Mutex
@@ -59,10 +59,10 @@ func (bc *BurtCoin) startSaveTimer(ctx context.Context) {
 	ticker := time.NewTicker(time.Second * 5)
 	for {
 		select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				bc.saveWalletsToFile()
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			bc.saveWalletsToFile()
 		}
 	}
 }
@@ -76,6 +76,10 @@ func (bc *BurtCoin) Run(msg twitch.PrivateMessage) {
 
 		n, err := strconv.Atoi(args[3])
 		if err != nil {
+			return
+		}
+		if n < 0 {
+			comm.ToChat(msg.Channel, "Can't give negative amounts of burtcoin")
 			return
 		}
 		if bc.Give(msg.User, args[2], float64(n)) {

@@ -118,9 +118,14 @@ func (t *TokenMachine) Run(msg twitch.PrivateMessage) {
 			return
 		}
 		n := big.NewInt(0)
+		z := big.NewInt(0)
 		_, err := fmt.Sscan(args[3], n)
 		if err != nil {
 			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, there was an error processing your request. Please try again in a moment.", msg.User.DisplayName))
+			return
+		}
+		if n.Cmp(z) <= 0 {
+			comm.ToChat(msg.Channel, "You can not give zero or negative amounts of tokens")
 			return
 		}
 		if tokenCount := t.getTokenCount(msg.User.DisplayName); n.Cmp(tokenCount) <= 0 {
