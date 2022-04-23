@@ -20,6 +20,7 @@
     <div>
         Spotify: {{ if not .SpotifyAuth }} <a href="{{ .SpotifyLink }}">Auth</a> {{ else }} <span class="authd">Authenticated</span> {{ end }}
         <br/>Twitch: {{ if not .TwitchAuth }} <a href="{{ .TwitchLink }}">Auth</a> {{ else }} <span class="authd">Authenticated</span> {{ end }}
+        <br/>Mobile Stream: {{ if not .MobileStream }} <a href="/toggle_mobile">Disabled</a> {{ else }} <a href="/toggle_mobile"><span class="authd">Enabled</span></a> {{ end }}
     </div>
 </body>
 </html>
