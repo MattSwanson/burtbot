@@ -10,7 +10,7 @@ import (
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
-type Marquee struct {}
+type Marquee struct{}
 
 type MarqueeMsg struct {
 	RawMessage string `json:"rawMessage"`
@@ -37,6 +37,9 @@ func (n *Marquee) Run(msg twitch.PrivateMessage) {
 	}
 	if args[1] == "off" {
 		comm.ToOverlay("marquee off")
+	}
+	if len(args) < 3 {
+		return
 	}
 	var offset int
 	if args[1] == "set" {
