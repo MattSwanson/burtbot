@@ -24,7 +24,7 @@ type apiResponse struct {
 }
 
 var jokeLock bool = false
-var jokeCD int = 5		 // seconds
+var jokeCD int = 5       // seconds
 var overloadCD int = 600 // seconds
 var canOverload bool = true
 var joke *Joke = &Joke{jokeModeStop: make(chan bool)}
@@ -75,7 +75,7 @@ func (j *Joke) Run(msg twitch.PrivateMessage) {
 			return
 		}
 		canOverload = false
-		go func(){
+		go func() {
 			time.Sleep(time.Second * time.Duration(overloadCD))
 			canOverload = true
 		}()
@@ -115,8 +115,9 @@ func (j *Joke) TellJoke(msg twitch.PrivateMessage, voiceOnly bool) {
 	}
 
 	stripped := strings.ReplaceAll(r.Joke, "\n", " ")
-	comm.ToOverlay(fmt.Sprintf("tts true %s", stripped))
-
+	if comm.IsConnectedToOverlay() {
+		comm.ToOverlay(fmt.Sprintf("tts true %s", stripped))
+	}
 	// Some jokes have \r\n in them - I think we need to filter those out
 	if voiceOnly {
 		return
