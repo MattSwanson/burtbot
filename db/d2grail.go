@@ -7,12 +7,43 @@ import (
 
 type GrailItem struct {
 	ID        int
+	ItemID    string
 	Name      string
 	SetName   string
 	BaseItem  string
 	Found     time.Time
 	BaseLevel int
 	Rarity    int
+}
+
+type ChatGrailItem struct {
+	TwitchID  int
+	UserName  string
+	ItemCode  string
+	Found     time.Time
+	DroppedBy string
+}
+
+func AddChatGrailItem(i ChatGrailItem) error {
+	u, _ := GetUser(i.TwitchID)
+	if u.TwitchID == 0 {
+		err := AddUser(User{i.TwitchID, i.UserName, false})
+		if err != nil {
+			return err
+		}
+	}
+	_, err := DbPool.Exec(context.Background(),
+		`INSERT INTO grail_progress (user_id, item, found, foundfrom)
+		VALUES ($1, $2, $3, $4)`, i.TwitchID, i.ItemCode, i.Found, i.DroppedBy)
+	return err
+}
+
+func GetChatGrailItemInfo(code string, userID int) (ChatGrailItem, error) {
+	item := ChatGrailItem{}
+	err := DbPool.QueryRow(context.Background(),
+		`SELECT * FROM grail_progress WHERE user_id = $1 AND item = $2`,
+		userID, code).Scan(&item.TwitchID, &item.ItemCode, &item.Found, &item.DroppedBy)
+	return item, err
 }
 
 func AddGrailItem(i GrailItem) error {

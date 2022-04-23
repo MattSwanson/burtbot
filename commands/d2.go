@@ -2,6 +2,7 @@ package commands
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -39,6 +40,8 @@ func patoi(s string) int {
 
 type Item interface {
 	getRarity() int
+	getLevel() int
+	getName() string
 	parseTableRecord(string) error
 }
 
@@ -53,6 +56,15 @@ func (base *BaseItem) getRarity() int {
 	return base.Rarity
 }
 
+func (base *BaseItem) getName() string {
+	return base.Name
+}
+
+func (base *BaseItem) getLevel() int {
+	return base.Level
+}
+
+// Seriously... AmIAnItem
 func AmIAnItem(i Item) bool {
 	return true
 }
@@ -89,6 +101,24 @@ func (wb *WeaponBase) parseTableRecord(record string) error {
 	return nil
 }
 
+type MiscItem struct {
+	BaseItem
+	Code string
+}
+
+func (mi *MiscItem) parseTableRecord(record string) error {
+	ln := strings.Split(record, "\t")
+	if len(ln) < 14 {
+		return errors.New("Not enough columns in input for MiscItem")
+	}
+	mi.Name = ln[0]
+	mi.Version = patoi(ln[2])
+	mi.Rarity = patoi(ln[8])
+	mi.Level = patoi(ln[3])
+	mi.Code = ln[14]
+	return nil
+}
+
 type d2 struct{}
 type ItemProbability struct {
 	Name string
@@ -105,27 +135,6 @@ type TreasureClass struct {
 	Magic  int
 	NoDrop int
 	Items  []ItemProbability
-}
-
-/*
-type ArmorBase struct {
-	Name    string
-	Version int
-	Rarity  int
-	Level   int
-}
-type WeaponBase struct {
-	Name    string
-	Version int
-	Rarity  int
-	Level   int
-}*/
-type MiscItem struct {
-	Name    string
-	Version int
-	Rarity  int
-	Level   int
-	Code    string
 }
 
 type ItemRatio struct {
@@ -172,6 +181,29 @@ var itemRatios = []ItemRatio{
 	},
 }
 
+// this will be marshalled into json and sent to the overlay
+type DropsInfo struct {
+	User   string
+	UserID int
+	Drops  []Drop
+}
+
+type Drop struct {
+	ID      string
+	Quality string
+	Name    string
+	New     bool
+}
+
+type Boss struct {
+	Name     string
+	TC       string
+	Cooldown int
+	LastKill map[string]time.Time
+}
+
+const FarmCooldown = 5 // seconds
+
 var dt = &d2{}
 var grailTpl *template.Template
 
@@ -185,6 +217,52 @@ var weaponBases = []WeaponBase{}
 var weaponClasses = make(map[string][]WeaponBase)
 var miscItems = []MiscItem{}
 var farming bool
+var lastFarm time.Time
+
+var availBosses = map[string]Boss{
+	"Andariel": Boss{
+		Name:     "Andariel",
+		TC:       "Andarielq (H)",
+		Cooldown: 15,
+		LastKill: make(map[string]time.Time),
+	},
+	"Baal": Boss{
+		Name:     "Baal",
+		TC:       "Baalq (H)",
+		Cooldown: 50,
+		LastKill: make(map[string]time.Time),
+	},
+	"Mephisto": Boss{
+		Name:     "Mephisto",
+		TC:       "Mephistoq (H)",
+		Cooldown: 20,
+		LastKill: make(map[string]time.Time),
+	},
+	"Diablo": Boss{
+		Name:     "Diablo",
+		TC:       "Diabloq (H)",
+		Cooldown: 40,
+		LastKill: make(map[string]time.Time),
+	},
+	"Cow King": Boss{
+		Name:     "Cow King",
+		TC:       "Cow King (H)",
+		Cooldown: 30,
+		LastKill: make(map[string]time.Time),
+	},
+	"Countess": Boss{
+		Name:     "Countess",
+		TC:       "Countess (H)",
+		Cooldown: 25,
+		LastKill: make(map[string]time.Time),
+	},
+	"Pindleskin": Boss{
+		Name:     "Pindleskin",
+		TC:       "Act 5 (H) Super Cx",
+		Cooldown: 10,
+		LastKill: make(map[string]time.Time),
+	},
+}
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -325,14 +403,8 @@ func loadMiscItems() {
 	scanner := bufio.NewScanner(f)
 	scanner.Scan()
 	for scanner.Scan() {
-		ln := strings.Split(scanner.Text(), "\t")
-		mi := MiscItem{
-			Name:    ln[0],
-			Version: patoi(ln[2]),
-			Rarity:  patoi(ln[8]),
-			Level:   patoi(ln[3]),
-			Code:    ln[14],
-		}
+		mi := MiscItem{}
+		mi.parseTableRecord(scanner.Text())
 		miscItems = append(miscItems, mi)
 	}
 	fmt.Println("Finished loading misc items")
@@ -379,6 +451,9 @@ func (d *d2) PostInit() {
 func (d *d2) Run(msg twitch.PrivateMessage) {
 
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
+	if len(args) == 1 {
+		return
+	}
 
 	if args[1] == "add" && IsMod(msg.User) {
 		loadItemsIntoDB()
@@ -442,12 +517,12 @@ func (d *d2) Run(msg twitch.PrivateMessage) {
 		go func() {
 			var runs int
 			var found bool
-			str := "Set Tal Rasha's Adjudication"
+			str := "Tal Rasha's Adjudication"
 			for {
 				runs++
-				drops := killMonster()
+				drops := killMonster(availBosses["Baal"])
 				for _, item := range drops {
-					if strings.EqualFold(str, item) {
+					if strings.EqualFold(str, item.Name) {
 						found = true
 						break
 					}
@@ -462,20 +537,105 @@ func (d *d2) Run(msg twitch.PrivateMessage) {
 	}
 
 	if args[1] == "farm" {
-		drops := killMonster()
-		comm.ToChat(msg.Channel, "Baal dropped: ")
-		for _, drop := range drops {
-			comm.ToChat(msg.Channel, drop)
-			comm.ToOverlay(fmt.Sprintf("itemdrop %s", drop))
+		if s := time.Since(lastFarm).Seconds(); s <= FarmCooldown {
+			comm.ToChat(msg.Channel, fmt.Sprintf("You must wait %d seconds to create a new game", FarmCooldown-int(s)))
+			return
+		}
+		lastFarm = time.Now()
+		if len(args) < 3 {
+			comm.ToChat(msg.Channel, "Need to provide an approved boss to farm")
+			return
+		}
+		bossName := strings.Join(args[2:], " ")
+		boss, ok := availBosses[bossName]
+		if !ok {
+			comm.ToChat(msg.Channel, fmt.Sprintf("%s is not available to farm.", bossName))
+			return
+		}
+		// Check cooldown for the given boss/user
+		last, _ := availBosses[bossName].LastKill[msg.User.ID]
+		if int(time.Since(last).Seconds()) < availBosses[bossName].Cooldown {
+			s := fmt.Sprintf("@%s, you must wait %d more seconds to farm %s again.",
+				msg.User.DisplayName,
+				availBosses[bossName].Cooldown-int(time.Since(last).Seconds()),
+				bossName)
+			comm.ToChat(msg.Channel, s)
+			return
+		}
+		availBosses[bossName].LastKill[msg.User.ID] = time.Now()
+		drops := killMonster(boss)
+		userID, err := strconv.Atoi(msg.User.ID)
+		if err != nil {
+			comm.ToChat(msg.Channel, "Invalid userID, cannot update grail progess.")
+		}
+		if !comm.IsConnectedToOverlay() {
+			comm.ToChat(msg.Channel, fmt.Sprintf("@%s felled %s and found:", msg.User.Name, bossName))
+		}
+
+		// check grail status for any unique, set or runes
+		for i, drop := range drops {
+			if !comm.IsConnectedToOverlay() {
+				comm.ToChat(msg.Channel, fmt.Sprintf("%s %s", drop.Quality, drop.Name))
+			}
+			itemCode := ""
+			switch drop.Quality {
+			case "Unique":
+				itemCode = "u" + drop.ID
+			case "Set":
+				itemCode = "s" + drop.ID
+			case "Rune":
+				itemCode = drop.ID
+			}
+			if itemCode == "" {
+				continue
+			}
+			found, err := checkIfFound(userID, itemCode)
+			if err != nil {
+				log.Println("Error checking grail status ", err)
+			}
+			if !found {
+				drops[i].New = true
+				item := db.ChatGrailItem{
+					TwitchID:  userID,
+					UserName:  msg.User.Name,
+					ItemCode:  itemCode,
+					Found:     time.Now(),
+					DroppedBy: bossName,
+				}
+				err := db.AddChatGrailItem(item)
+				if err != nil {
+					log.Println("Couldn't update grail status ", err)
+					comm.ToChat(msg.Channel, "I couldn't update the grail status, sorry.")
+				}
+				comm.ToChat(msg.Channel, fmt.Sprintf("New item for @%s: %s!", msg.User.Name, drop.Name))
+			}
+		}
+		dropInfo := DropsInfo{
+			User:   msg.User.Name,
+			UserID: userID,
+			Drops:  drops,
+		}
+		j, err := json.Marshal(dropInfo)
+		if err != nil {
+			log.Println("Error marshaling drop info to json ", err)
+		}
+		if comm.IsConnectedToOverlay() {
+			comm.ToOverlay(fmt.Sprintf("itemdrops %s", string(j)))
 		}
 	}
 
+}
+
+func checkIfFound(userID int, itemCode string) (bool, error) {
+	item, err := db.GetChatGrailItemInfo(itemCode, userID)
+	return !(item.DroppedBy == ""), err
 }
 
 func loadItemsIntoDB() {
 
 	for _, unique := range uniqueItems {
 		item := db.GrailItem{
+			ItemID:    unique[1],
 			Name:      unique[0],
 			SetName:   "",
 			BaseItem:  unique[10],
@@ -490,6 +650,7 @@ func loadItemsIntoDB() {
 	for _, set := range setItems {
 		item := db.GrailItem{
 			Name:      set[0],
+			ItemID:    set[1],
 			SetName:   set[2],
 			BaseItem:  set[4],
 			BaseLevel: 0,
@@ -542,6 +703,10 @@ func unfoundItems(w http.ResponseWriter, r *http.Request) {
 	grailTpl.ExecuteTemplate(w, "grail.gohtml", d)
 }
 
+func grailStatus(w http.ResponseWriter, r *http.Request) {
+
+}
+
 func foundItem(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.FormValue("id"))
 	if err != nil {
@@ -589,6 +754,7 @@ func getSetItemsForBase(base string) []db.GrailItem {
 		if strings.ToLower(item[4]) == strings.ToLower(base) {
 			match := db.GrailItem{
 				Name:      item[0],
+				ItemID:    item[1],
 				SetName:   item[2],
 				BaseItem:  item[4],
 				BaseLevel: 0,
@@ -605,6 +771,7 @@ func getUniqueItemsForBase(base string) []db.GrailItem {
 	for _, item := range uniqueItems {
 		if strings.ToLower(item[10]) == strings.ToLower(base) {
 			match := db.GrailItem{
+				ItemID:    item[1],
 				Name:      item[0],
 				SetName:   "",
 				BaseItem:  item[10],
@@ -654,7 +821,7 @@ func farm() int {
 	return 0
 }
 
-func killMonster() []string {
+func killMonster(monster Boss) []Drop {
 	// Essentially this is a slot machine
 	// which will use the bosses loot info
 	// to drop items for the user who "killed"
@@ -666,19 +833,22 @@ func killMonster() []string {
 	// should drop unid items maybe? start without it
 
 	// get monsters treasure class
-	tc := getTreasureClass("Baal (H)")
+	tc := getTreasureClass(monster.TC)
 	nDrops := 0
-	drops := []string{}
-	for i := 0; i < tc.Picks; i++ {
-		drop := pickTreasureClass("Baal (H)")
-		if drop == "NoDrop" {
+	drops := []Drop{}
+	picks := int(math.Abs(float64(tc.Picks)))
+	for i := 0; i < picks; i++ {
+		dropBase := pickTreasureClass(monster.TC)
+		drop := Drop{}
+		if dropBase == "NoDrop" {
 			continue
 		}
 		nDrops++
 		// get the item base for the treasureClass
 		// we ended at (armo87, weap33 etc)
-		if strings.Contains(drop, "armo") {
-			armorBases := armorClasses[drop]
+		if strings.Contains(dropBase, "armo") {
+			//		drop = selectItemFromTreasureClass(armorClasses[drop], tc)
+			armorBases := armorClasses[dropBase]
 			prob := 0
 			for _, base := range armorBases {
 				prob += base.Rarity
@@ -689,23 +859,37 @@ func killMonster() []string {
 				thresh += base.Rarity
 				if r < thresh {
 					quality := rollItem(tc, 99, base.Level)
+					name := base.Name
+					id := ""
 					if quality == "Unique" {
 						matches := getUniqueItemsForBase(base.Name)
 						if len(matches) == 0 {
-							quality = "Superior"
+							quality = "Rare"
+						}
+						if len(matches) == 1 {
+							name = matches[0].Name
+							id = matches[0].ItemID
 						}
 					} else if quality == "Set" {
 						matches := getSetItemsForBase(base.Name)
 						if len(matches) == 0 {
-							quality = "Superior"
+							quality = "Rare"
+						}
+						if len(matches) == 1 {
+							name = matches[0].Name
+							id = matches[0].ItemID
 						}
 					}
-					drop = fmt.Sprintf("%s %s", quality, base.Name)
+					drop = Drop{
+						ID:      id,
+						Quality: quality,
+						Name:    name,
+					}
 					break
 				}
 			}
-		} else if strings.Contains(drop, "weap") {
-			weaponBases := weaponClasses[drop]
+		} else if strings.Contains(dropBase, "weap") {
+			weaponBases := weaponClasses[dropBase]
 			prob := 0
 			for _, base := range weaponBases {
 				prob += base.Rarity
@@ -718,24 +902,38 @@ func killMonster() []string {
 					continue
 				}
 				quality := rollItem(tc, 99, base.Level)
+				name := base.Name
+				id := ""
 				if quality == "Unique" {
 					matches := getUniqueItemsForBase(base.Name)
 					if len(matches) == 0 {
-						quality = "Superior"
+						quality = "Rare"
+					}
+					if len(matches) == 1 {
+						name = matches[0].Name
+						id = matches[0].ItemID
 					}
 				} else if quality == "Set" {
 					matches := getSetItemsForBase(base.Name)
 					if len(matches) == 0 {
-						quality = "Superior"
+						quality = "Rare"
+					}
+					if len(matches) == 1 {
+						name = matches[0].Name
+						id = matches[0].ItemID
 					}
 				}
-				drop = fmt.Sprintf("%s %s", quality, base.Name)
+				drop = Drop{
+					ID:      id,
+					Quality: quality,
+					Name:    name,
+				}
 				break
 			}
-		} else if drop == "rin" || drop == "amu" {
+		} else if dropBase == "rin" || dropBase == "amu" {
 			quality := rollItem(tc, 99, 1)
 			name := "Ring"
-			if drop == "amu" {
+			if dropBase == "amu" {
 				name = "Amulet"
 			}
 			if quality == "Unique" {
@@ -751,7 +949,11 @@ func killMonster() []string {
 				for _, item := range matches {
 					thresh += item.Rarity
 					if r < thresh {
-						drop = fmt.Sprintf("%s %s", quality, item.Name)
+						drop = Drop{
+							ID:      item.ItemID,
+							Quality: quality,
+							Name:    item.Name,
+						}
 						break
 					}
 				}
@@ -766,19 +968,39 @@ func killMonster() []string {
 				for _, item := range matches {
 					thresh += item.Rarity
 					if r < thresh {
-						drop = fmt.Sprintf("%s %s", quality, item.Name)
+						drop = Drop{
+							ID:      item.ItemID,
+							Quality: quality,
+							Name:    item.Name,
+						}
 						break
 					}
 				}
 			} else {
-				drop = fmt.Sprintf("%s %s", quality, name)
+				drop = Drop{
+					Quality: quality,
+					Name:    name,
+				}
 			}
-		} else if strings.HasPrefix(drop, "\"gld") {
-			drop = "X Gold"
+		} else if strings.HasPrefix(dropBase, "\"gld") {
+			drop = Drop{
+				Quality: "",
+				Name:    "Gold",
+			}
 		} else {
 			for _, item := range miscItems {
-				if item.Code == drop {
-					drop = item.Name
+				quality := ""
+				if item.Code == dropBase {
+					if strings.Contains(item.Name, "Rune") {
+						quality = "Rune"
+					} else if strings.HasPrefix(dropBase, "cm") {
+						quality = "Magic"
+					}
+					drop = Drop{
+						Quality: quality,
+						Name:    item.Name,
+						ID:      item.Code,
+					}
 					break
 				}
 			}
@@ -791,6 +1013,35 @@ func killMonster() []string {
 	return drops
 }
 
+func selectItemFromTreasureClass(itemBases []BaseItem, monsterTC *TreasureClass) string {
+	prob := 0
+	for _, base := range itemBases {
+		prob += base.getRarity()
+	}
+	r := rand.Intn(prob)
+	var thresh int
+	for _, base := range itemBases {
+		thresh += base.getRarity()
+		if r >= thresh {
+			continue
+		}
+		quality := rollItem(monsterTC, 99, base.getLevel())
+		if quality == "Unique" {
+			matches := getUniqueItemsForBase(base.getName())
+			if len(matches) == 0 {
+				quality = "Superior"
+			}
+		} else if quality == "Set" {
+			matches := getSetItemsForBase(base.getName())
+			if len(matches) == 0 {
+				quality = "Superior"
+			}
+		}
+		return fmt.Sprintf("%s %s", quality, base.getName())
+	}
+	return ""
+}
+
 // pickTreasureClass will make a pick from the given
 // treasure class and then return the item which is
 // picked or nodrop. This could be recursive if the
@@ -801,6 +1052,7 @@ func pickTreasureClass(tcName string) string {
 		// if we get a nil pointer that means
 		// we got an item, so return that string
 		// up the chain
+		log.Println("hit bottom: ", tcName)
 		return tcName
 	}
 	prob := tc.NoDrop
@@ -810,11 +1062,13 @@ func pickTreasureClass(tcName string) string {
 	r := rand.Intn(prob)
 	thresh := tc.NoDrop
 	if r < thresh {
+		log.Println("No drop...")
 		return "NoDrop"
 	}
 	for _, item := range tc.Items {
 		thresh += item.Prob
 		if r < thresh {
+			log.Println("picking from: ", item.Name)
 			return pickTreasureClass(item.Name)
 		}
 	}
@@ -885,5 +1139,7 @@ func rollItem(tc *TreasureClass, mLvl, iLvl int) string {
 func (d *d2) Help() []string {
 	return []string{
 		"!d2 unique [item] - search for a unique item",
+		"!d2 farm [boss] - farm a boss for epic loots",
+		"Available bosses: Andariel, Mephisto, Diablo, Baal",
 	}
 }
