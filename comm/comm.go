@@ -1,36 +1,49 @@
 package comm
 
 import (
-	"fmt"
-	"net"
-	"log"
-	"time"
-	"context"
 	"bufio"
+	"context"
+	"fmt"
+	"log"
+	"net"
 	"os"
 	"strings"
+	"time"
 
-	"github.com/gempir/go-twitch-irc/v2"
 	"github.com/MattSwanson/burtbot/console"
+	"github.com/gempir/go-twitch-irc/v2"
 )
 
 var writeChannel chan string
 var readChannel chan string
+var inputChannel chan string
 var subscribers map[string][]func([]string)
 var chatClient *twitch.Client
+var connectedToOverlay bool
 
 func init() {
 	writeChannel = make(chan string)
 	readChannel = make(chan string)
+	inputChannel = make(chan string)
 	subscribers = make(map[string][]func([]string))
+	//listenOnInput()
 }
 
 func GetReadChannel() chan string {
 	return readChannel
 }
 
+func GetInputChannel() chan string {
+	return inputChannel
+}
+
 func ToOverlay(s string) {
-	writeChannel <- s
+	// keep things from queuing up when connected
+	// and also from goroutines from hanging around
+	// waiting for the channel to read
+	if IsConnectedToOverlay() {
+		writeChannel <- s
+	}
 }
 
 func FromOverlay() string {
@@ -44,7 +57,21 @@ func AddChatClient(client *twitch.Client) {
 func ToChat(channelName string, msg string) {
 	chatClient.Say(channelName, msg)
 }
- 
+
+func listenOnInput() {
+	go func(c chan string) {
+		scanner := bufio.NewScanner(os.Stdin)
+		for {
+			scanner.Scan()
+			text := scanner.Text()
+			if text == "" {
+				continue
+			}
+			ToChat("burtstanton", text)
+		}
+	}(inputChannel)
+}
+
 func ConnectToOverlay() {
 	addr := fmt.Sprintf("%s:8081", os.Getenv("OVERLAY_IP"))
 	conn, err := net.Dial("tcp", addr)
@@ -62,6 +89,7 @@ func ConnectToOverlay() {
 	ctx, cancelPing := context.WithCancel(context.Background())
 	pingOverlay(ctx, writeChannel)
 	console.SetOverlayStatus(true)
+	connectedToOverlay = true
 	for {
 		s := <-writeChannel
 		// fmt.Println(s)
@@ -69,6 +97,7 @@ func ConnectToOverlay() {
 		if err != nil {
 			// we know we have no connection, stop pinging until we reconnect
 			cancelPing()
+			connectedToOverlay = false
 			console.SetOverlayStatus(false)
 			log.Println("Lost connection to overlay... will retry in 5 sec.")
 			readChannel <- "reset"
@@ -96,7 +125,7 @@ func pingOverlay(ctx context.Context, c chan string) {
 
 func SubscribeToReply(command string, f func([]string)) {
 	if _, ok := subscribers[command]; !ok {
-		subscribers[command] = []func([]string){} 
+		subscribers[command] = []func([]string){}
 	}
 	subscribers[command] = append(subscribers[command], f)
 }
@@ -123,4 +152,18 @@ func notifySubscribers() {
 			break
 		}
 	}
+}
+
+// IsConnetedToOverlay allows users of ToOverlay to check if
+// a connection is active. ToOverlay will automatically drop
+// strings sent if there is no connection to prevent queueing(?)
+// and to keep goroutines from hanging waiting for the channel to
+// be read from.
+//
+// Different behaviour may be wanted if there overlay is not connected
+// Hence exporting this function. Also, you may want to know the connection
+// status before calling ToChat so that's why ToChat doesn't return an
+// error or bool or something like that
+func IsConnectedToOverlay() bool {
+	return connectedToOverlay
 }
