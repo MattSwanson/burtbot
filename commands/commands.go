@@ -5,16 +5,16 @@
 package commands
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
-	"os"
-	"log"
-	"encoding/json"
-	"net/http"
 	"html/template"
+	"log"
+	"net/http"
+	"os"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/MattSwanson/burtbot/comm"
@@ -33,6 +33,7 @@ var onJoinSubscriptions []func(twitch.UserJoinMessage)
 var rawMsgSubscriptions []func(twitch.PrivateMessage)
 var helpTemplate *template.Template
 var lastHelpAll time.Time
+var mobileStream bool
 
 type Command interface {
 	Run(twitch.PrivateMessage)
@@ -41,14 +42,14 @@ type Command interface {
 }
 
 type CmdHandler struct {
-	Client     *twitch.Client
-	Commands   map[string]Command
-	aliases	   map[string]string
+	Client   *twitch.Client
+	Commands map[string]Command
+	aliases  map[string]string
 }
 
 type cmdHelp struct {
-	Name string
-	Help []string
+	Name    string
+	Help    []string
 	Aliases map[string]string
 }
 
@@ -57,7 +58,7 @@ type cmdHelp struct {
 // }
 
 func init() {
-	http.HandleFunc("/commands", commandList) 
+	http.HandleFunc("/commands", commandList)
 	helpTemplate = template.Must(template.ParseFiles("templates/help.gohtml"))
 }
 
@@ -83,7 +84,7 @@ func RegisterCommand(pattern string, c Command) error {
 func (handler *CmdHandler) PostInit() {
 	helix.SubscribeToFollowEvent(FollowAlertToOverlay)
 	for _, c := range handler.Commands {
-		c.PostInit()		
+		c.PostInit()
 	}
 }
 
@@ -103,6 +104,9 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 	if msg.Message == "d" {
 		comm.ToOverlay("right")
 	}
+	if mobileStream {
+		comm.ToOverlay(fmt.Sprintf("tts false %s says %s", msg.User.DisplayName, msg.Message))
+	}
 
 	if !strings.HasPrefix(msg.Message, "!") {
 		return
@@ -113,8 +117,17 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 	if args[0] == "fakefollow" {
 		if len(args) < 2 {
 			return
-		}	
+		}
 		FollowAlertToOverlay(args[1])
+	}
+
+	if args[0] == "mobilestream" {
+		mobileStream = !mobileStream
+		s := "disabled"
+		if mobileStream {
+			s = "enabled"
+		}
+		comm.ToChat(msg.Channel, fmt.Sprintf("Mobile stream %s", s))
 	}
 
 	lower := strings.ToLower(msg.Message)
@@ -126,12 +139,12 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 		// !alias add alias command
 		if len(fields) > 3 && fields[1] == "add" {
 			originalCommand := strings.Join(fields[3:], " ")
-			err := handler.RegisterAlias(fields[2], originalCommand)			
+			err := handler.RegisterAlias(fields[2], originalCommand)
 			if err != nil {
 				comm.ToChat(msg.Channel, fmt.Sprintf("The alias [%s] already exists.", fields[2]))
 				return
 			}
-			comm.ToChat(msg.Channel, fmt.Sprintf("Created alias [%s] for [%s]", fields[2], originalCommand)) 
+			comm.ToChat(msg.Channel, fmt.Sprintf("Created alias [%s] for [%s]", fields[2], originalCommand))
 			return
 		}
 		if len(fields) > 2 && fields[1] == "remove" {
@@ -242,7 +255,7 @@ func (handler *CmdHandler) saveAliasesToFile() {
 func (handler *CmdHandler) InjectAliases(message string) string {
 	// check to see if the command entered is an alias
 	fields := strings.Fields(strings.TrimPrefix(message, "!"))
-	command, ok := handler.aliases[fields[0]] 
+	command, ok := handler.aliases[fields[0]]
 	if !ok {
 		return message
 	}
@@ -272,8 +285,8 @@ func commandList(w http.ResponseWriter, r *http.Request) {
 	cmds := []cmdHelp{}
 	for cmdName, cmd := range cmdHandler.Commands {
 		c := cmdHelp{
-			Name: cmdName,
-			Help: []string{},
+			Name:    cmdName,
+			Help:    []string{},
 			Aliases: map[string]string{},
 		}
 		for k, v := range cmdHandler.aliases {
@@ -282,7 +295,7 @@ func commandList(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		for _, h := range cmd.Help() {
-			c.Help = append(c.Help, h)	
+			c.Help = append(c.Help, h)
 		}
 		cmds = append(cmds, c)
 	}
@@ -317,48 +330,48 @@ func CheckArgs(args []string, count int, argStruct interface{}) (bool, error) {
 		// Check the type expected in the struct
 		fieldValue := v.Field(i)
 		switch fieldValue.Kind() {
-			case reflect.Bool:
-				b, err := strconv.ParseBool(args[i])
-				if err != nil {
-					return false, nil
-				}
-				fieldValue.SetBool(b)
-			case reflect.Complex64, reflect.Complex128:
-				bitSize := 64
-				if fieldValue.Kind() == reflect.Complex128 {
-					bitSize = 128
-				}
-				c, err := strconv.ParseComplex(args[i], bitSize)
-				if err != nil {
-					return false, nil
-				}
-				fieldValue.SetComplex(c)
-			case reflect.Float32, reflect.Float64:
-				bitSize := 32
-				if fieldValue.Kind() == reflect.Float64 {
-					bitSize = 64
-				}
-				f, err := strconv.ParseFloat(args[i], bitSize)
-				if err != nil {
-					return false, nil
-				}
-				fieldValue.SetFloat(f)
-			case reflect.Int:
-				n, err := strconv.ParseInt(args[i], 10, 64)
-				if err != nil {
-					return false, nil
-				}
-				v.Field(i).SetInt(n)
-			case reflect.String:
-				fieldValue.SetString(args[i])
-			case reflect.Uint:
-				n, err := strconv.ParseUint(args[i], 10, 64)
-				if err != nil {
-					return false, nil
-				}
-				fieldValue.SetUint(n)
-			default:
+		case reflect.Bool:
+			b, err := strconv.ParseBool(args[i])
+			if err != nil {
 				return false, nil
+			}
+			fieldValue.SetBool(b)
+		case reflect.Complex64, reflect.Complex128:
+			bitSize := 64
+			if fieldValue.Kind() == reflect.Complex128 {
+				bitSize = 128
+			}
+			c, err := strconv.ParseComplex(args[i], bitSize)
+			if err != nil {
+				return false, nil
+			}
+			fieldValue.SetComplex(c)
+		case reflect.Float32, reflect.Float64:
+			bitSize := 32
+			if fieldValue.Kind() == reflect.Float64 {
+				bitSize = 64
+			}
+			f, err := strconv.ParseFloat(args[i], bitSize)
+			if err != nil {
+				return false, nil
+			}
+			fieldValue.SetFloat(f)
+		case reflect.Int:
+			n, err := strconv.ParseInt(args[i], 10, 64)
+			if err != nil {
+				return false, nil
+			}
+			v.Field(i).SetInt(n)
+		case reflect.String:
+			fieldValue.SetString(args[i])
+		case reflect.Uint:
+			n, err := strconv.ParseUint(args[i], 10, 64)
+			if err != nil {
+				return false, nil
+			}
+			fieldValue.SetUint(n)
+		default:
+			return false, nil
 		}
 		// if the arg at that same index cannot be parsed to that type, return false
 		// if it can, store the parsed value in the field
@@ -371,7 +384,7 @@ func CheckArgs(args []string, count int, argStruct interface{}) (bool, error) {
 func CheckArgsCB(args []string, count int, callback func(string), argStruct interface{}) (bool, error) {
 	if result, err := CheckArgs(args, count, argStruct); !result {
 		callback("not good")
-		return false, err 
+		return false, err
 	}
 	return true, nil
 }
