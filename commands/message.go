@@ -8,7 +8,7 @@ import (
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
-type Msg struct {}
+type Msg struct{}
 
 var msg *Msg = &Msg{}
 
@@ -21,9 +21,10 @@ func (m *Msg) PostInit() {
 }
 
 func (m *Msg) Run(msg twitch.PrivateMessage) {
-	// if !isMod(msg.User) {
-	// 	return
-	// }
+	return
+	if !IsMod(msg.User) {
+		return
+	}
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
 	if len(args) < 2 {
 		comm.ToChat(msg.Channel, "Not enough stuff for stuff")
