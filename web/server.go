@@ -1,14 +1,15 @@
 package web
 
 import (
+	"fmt"
+	"html/template"
 	"log"
 	"net"
 	"net/http"
-	"strings"
 	"os"
-	"fmt"
-	"html/template"
+	"strings"
 
+	"github.com/MattSwanson/burtbot/comm"
 	"github.com/MattSwanson/burtbot/helix"
 )
 
@@ -27,12 +28,12 @@ func init() {
 	localIP = split[0]
 }
 
-
 func StartWebServer() {
 
 	// Add handlers for http stuffs
 	http.HandleFunc("/twitch_authcb", helix.TwitchAuthCb)
 	http.HandleFunc("/eventsub_cb", helix.EventSubCallback)
+	http.HandleFunc("/metrics", handleMetrics)
 	http.HandleFunc("/", home)
 
 	// Create a web server to listen on HTTPS
@@ -48,13 +49,11 @@ func home(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "boop.\n")
 }
 
-
-
 func AuthHandleFunc(pattern string, handlerFunc func(http.ResponseWriter, *http.Request)) {
 	wrappedFunc := func(w http.ResponseWriter, r *http.Request) {
 		// run our auth on the request
 		if !authenticateRequest(r) {
-		// if no go - retrun StatusForbidden
+			// if no go - retrun StatusForbidden
 			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}
@@ -71,9 +70,23 @@ func AuthHandleFunc(pattern string, handlerFunc func(http.ResponseWriter, *http.
 func authenticateRequest(r *http.Request) bool {
 	remote := strings.Split(r.RemoteAddr, ":")
 	if remote[0] != os.Getenv("OVERLAY_IP") &&
-	   remote[0] != localIP {
+		remote[0] != localIP && remote[0] != "68.47.92.253" {
 		return false
 	}
 	return true
 }
 
+func handleMetrics(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, "Bad form values", http.StatusBadRequest)
+		return
+	}
+
+	comm.ToOverlay(fmt.Sprintf("hr %s", r.Form.Get("hr")))
+	comm.ToOverlay(fmt.Sprintf("cars %s", r.Form.Get("cars")))
+}
