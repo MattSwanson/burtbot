@@ -1,10 +1,11 @@
-package console 
+package console
 
 import (
 	"fmt"
 	"log"
-	"github.com/lucasb-eyer/go-colorful"
+
 	"github.com/gempir/go-twitch-irc/v2"
+	"github.com/lucasb-eyer/go-colorful"
 )
 
 const numMessages = 25
@@ -21,13 +22,13 @@ const (
 )
 
 type nonChatMessage struct {
-	Message		string
-	ColorCode	int 
+	Message   string
+	ColorCode int
 }
 
 type ServiceStatus struct {
 	Spotify bool
-	Twitch bool
+	Twitch  bool
 	Overlay bool
 }
 
@@ -45,7 +46,6 @@ func SetSpotifyStatus(s bool) {
 	displayMessages()
 }
 
-
 func SetTwitchStatus(s bool) {
 	status.Twitch = s
 	displayMessages()
@@ -53,8 +53,8 @@ func SetTwitchStatus(s bool) {
 
 func SetOverlayStatus(s bool) {
 	status.Overlay = s
-		displayMessages()
-	}
+	displayMessages()
+}
 
 func getColorEscapeCode(hexColor string) string {
 	colorCode := 34
@@ -79,20 +79,20 @@ func getColorEscapeCode(hexColor string) string {
 	}
 	ih = ih % 360
 	switch ih {
-		case 0:
-			colorCode = Red
-		case 60:
-			colorCode = Yellow
-		case 120:
-			colorCode = Green
-		case 180:
-			colorCode = Cyan
-		case 240:
-			colorCode = Blue
-		case 300:
-			colorCode = Magenta
-		default:
-			colorCode = White
+	case 0:
+		colorCode = Red
+	case 60:
+		colorCode = Yellow
+	case 120:
+		colorCode = Green
+	case 180:
+		colorCode = Cyan
+	case 240:
+		colorCode = Blue
+	case 300:
+		colorCode = Magenta
+	default:
+		colorCode = White
 	}
 	return fmt.Sprintf("\033[%dm", colorCode)
 }
@@ -111,7 +111,7 @@ func ShowMessageOnConsole(msg twitch.PrivateMessage) {
 func displayMessages() {
 	// print the last x messages to the screen - 5 for now
 	fmt.Print("\033[H\033[2J")
-	num := numMessages	// number of messages to display
+	num := numMessages // number of messages to display
 	if num > len(chatMessages) {
 		num = len(chatMessages)
 	}
@@ -122,24 +122,28 @@ func displayMessages() {
 	end := start + num
 	for i := start; i < end; i++ {
 		switch msg := chatMessages[i].(type) {
-			case twitch.PrivateMessage: 
-				badges := ""
-				if len(msg.User.Badges) > 0 {
-					if _, ok := msg.User.Badges["broadcaster"]; ok {
-						c := getColorEscapeCode("#FF0000")
-						badges += fmt.Sprintf("%s[B]", c)
-					}
-					if _, ok := msg.User.Badges["moderator"]; ok {
-						c := getColorEscapeCode("#00FF00")
-						badges += fmt.Sprintf("%s[M]", c)
-					}
+		case twitch.PrivateMessage:
+			badges := ""
+			if len(msg.User.Badges) > 0 {
+				if _, ok := msg.User.Badges["broadcaster"]; ok {
+					c := getColorEscapeCode("#FF0000")
+					badges += fmt.Sprintf("%s[B]", c)
 				}
-				cesc := getColorEscapeCode(msg.User.Color)
-				h, m, _ := msg.Time.Clock()
-				fmt.Println(fmt.Sprintf("%02d:%02d%s%s[%s]\033[0m: %s", 
-					h, m, badges, cesc, msg.User.DisplayName, msg.Message))
-			case nonChatMessage:
-				fmt.Println(fmt.Sprintf("\033[%dm%s\033[0m", msg.ColorCode, msg.Message))
+				if _, ok := msg.User.Badges["moderator"]; ok {
+					c := getColorEscapeCode("#00FF00")
+					badges += fmt.Sprintf("%s[M]", c)
+				}
+				if _, ok := msg.User.Badges["vip"]; ok {
+					c := getColorEscapeCode("#800080")
+					badges += fmt.Sprintf("%s[V]", c)
+				}
+			}
+			cesc := getColorEscapeCode(msg.User.Color)
+			h, m, _ := msg.Time.Clock()
+			fmt.Println(fmt.Sprintf("%02d:%02d%s%s[%s]\033[0m: %s",
+				h, m, badges, cesc, msg.User.DisplayName, msg.Message))
+		case nonChatMessage:
+			fmt.Println(fmt.Sprintf("\033[%dm%s\033[0m", msg.ColorCode, msg.Message))
 		}
 
 	}
@@ -150,8 +154,8 @@ func displayMessages() {
 		spotifyStatusColor = Green
 	}
 	if status.Twitch {
-		twitchStatusColor =  Green
-	} 
+		twitchStatusColor = Green
+	}
 	if status.Overlay {
 		overlayStatusColor = Green
 	}
@@ -171,10 +175,10 @@ func deleteMessageByMsgID(id string) {
 	index := -1
 	for i := 0; i < len(chatMessages); i++ {
 		switch msg := chatMessages[i].(type) {
-			case twitch.PrivateMessage:
-				if msg.ID == id {
-					index = i
-				}
+		case twitch.PrivateMessage:
+			if msg.ID == id {
+				index = i
+			}
 		}
 	}
 	if index == -1 {
@@ -201,7 +205,7 @@ func deleteChatMessage(index int) {
 		chatMessages = chatMessages[:index]
 	} else {
 		chatMessages = append(chatMessages[:index], chatMessages[index+1:]...)
-	}	
+	}
 }
 
 func HandleClearMessage(msg twitch.ClearMessage) {
@@ -212,8 +216,14 @@ func HandleClearMessage(msg twitch.ClearMessage) {
 // Display a message in the console chat
 func AddMessage(msg string, colorCode int) {
 	chatMessages = append(chatMessages, nonChatMessage{
-		Message: msg,
+		Message:   msg,
 		ColorCode: colorCode,
 	})
+	displayMessages()
+}
+
+func ClearConsole() {
+	var empty []interface{}
+	chatMessages = empty
 	displayMessages()
 }
