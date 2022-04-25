@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/MattSwanson/burtbot/comm"
+	"github.com/MattSwanson/burtbot/console"
 	"github.com/MattSwanson/burtbot/helix"
 	"github.com/gempir/go-twitch-irc/v2"
 )
@@ -113,6 +114,10 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 	}
 	msg.Message = handler.InjectAliases(msg.Message)
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
+
+	if args[0] == "clearconsole" {
+		console.ClearConsole()
+	}
 
 	if args[0] == "fakefollow" {
 		if len(args) < 2 {
