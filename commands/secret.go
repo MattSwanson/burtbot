@@ -39,8 +39,9 @@ func secretCommands(msg twitch.PrivateMessage) {
 		time.Since(lastMK).Seconds() > 21600 {
 		if rand.Intn(1000) >= 975 {
 			comm.ToOverlay("mk")
-			lastMK = time.Now()
 		}
+		// do it this way so it only can happen on first message, not every message
+		lastMK = time.Now()
 	}
 
 	lower := strings.ToLower(msg.Message)
@@ -49,7 +50,7 @@ func secretCommands(msg twitch.PrivateMessage) {
 	}
 	if count := strings.Count(lower, "quack"); count > 0 {
 		comm.ToOverlay(fmt.Sprintf("quack %d", count))
-		if msg.User.DisplayName == "0xffffffff810000000" {
+		if msg.User.ID == "445815779" {
 			if time.Since(lastQuacksplosion).Seconds() > 21600 {
 				comm.ToOverlay("quacksplosion")
 				lastQuacksplosion = time.Now()
