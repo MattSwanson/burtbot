@@ -19,12 +19,18 @@ import (
 	"github.com/MattSwanson/burtbot/console"
 )
 
+const (
+	FollowRequestType = "channel.follow"
+	RaidRequestType   = "channel.raid"
+)
+
 var twitchAuthCh chan bool
 var twitchAuth bool
 var twitchAccessToken string
 var twitchAppAccessToken string
 var twitchRefreshToken string
 var followEventSubscriptions []func(string)
+var raidEventSubscriptions []func(string, int)
 
 type twitchAuthResp struct {
 	Access_token  string
@@ -50,6 +56,14 @@ type ChannelInfo struct {
 	Title               string
 }
 
+type BroadcasterUserIDCondition struct {
+	BroadcasterUserID string `json:"broadcaster_user_id"`
+}
+
+type ToBroadcasterUserIDCondition struct {
+	ToBroadcasterUserID string `json:"to_broadcaster_user_id"`
+}
+
 type EventSubscription struct {
 	ID        string
 	Status    string
@@ -66,30 +80,94 @@ type EventSubscription struct {
 	}
 }
 
+type Transport struct {
+	Method   string `json:"method"`
+	Callback string `json:"callback"`
+	Secret   string `json:"secret"`
+}
+
+type EventSubRequest struct {
+	Type      string      `json:"type"`
+	Version   string      `json:"version"`
+	Condition interface{} `json:"condition"`
+	Transport `json:"transport"`
+}
+
+type Subscription struct {
+	ID        string
+	Status    string
+	Type      string
+	Version   string
+	Cost      int
+	Condition interface{}
+	Transport struct {
+		Method   string
+		Callback string
+	}
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type FollowNotification struct {
+	Subscription
+	Event FollowEvent
+}
+
+type RaidNotification struct {
+	Subscription
+	Event RaidEvent
+}
+
+type RaidEvent struct {
+	FromBroadcasterUserID    string `json:"from_broadcaster_user_id"`
+	FromBroadcasterUserLogin string `json:"from_broadcaster_user_login"`
+	FromBroadcasterUserName  string `json:"from_broadcaster_user_name"`
+	ToBroadcasterUserID      string `json:"to_broadcaster_user_id"`
+	ToBroadcasterUserLogin   string `json:"to_broadcaster_user_login"`
+	ToBroadcasterUserName    string `json:"to_broadcaster_user_name"`
+	Viewers                  int
+}
+
+type FollowEvent struct {
+	UserID               string    `json:"user_id"`
+	UserLogin            string    `json:"user_login"`
+	UserName             string    `json:"user_name"`
+	BroadcasterUserID    string    `json:"broadcaster_user_id"`
+	BroadcasterUserLogin string    `json:"broadcaster_user_login"`
+	BroadcasterUserName  string    `json:"broadcaster_user_name"`
+	FollowedAt           time.Time `json:"followed_at"`
+}
+
 func Init() {
 	go func() {
 		twitchAuthCh = make(chan bool)
-		
+
 		twitchAuth = <-twitchAuthCh
 		console.SetTwitchStatus(true)
 		twitchAppAccessToken = getAppAccessToken()
 
+		// subscribe(RaidRequestType)
 		// Get active eventsubs cancel them since they likely have an out of date callback url
 		eventSubs := getSubscriptions()
-		var alreadySubbed bool
+		followSub, raidSub := false, false
 		for _, es := range eventSubs {
-			if es.Transport.Callback == os.Getenv("TWITCH_CALLBACK_URL") {
-				alreadySubbed = true
+			if es.Type == FollowRequestType {
+				followSub = true
 				continue
 			}
-			deleteSubscription(es.ID)
+			if es.Type == RaidRequestType {
+				raidSub = true
+				continue
+			}
+			//deleteSubscription(es.ID)
 		}
-		if !alreadySubbed {
-			subscribe("channel.follow")
+		if !followSub {
+			subscribe(FollowRequestType)
+		}
+		if !raidSub {
+			subscribe(RaidRequestType)
 		}
 	}()
 }
-
 
 func TwitchAuthCb(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
@@ -239,36 +317,27 @@ func GetChannelInfo(broadcaster_id string) ChannelInfo {
 
 func subscribe(event string) {
 	u := "https://api.twitch.tv/helix/eventsub/subscriptions"
-	cond := struct {
-		BroadCasterUserID string `json:"broadcaster_user_id"`
-	}{"38570305"}
+	var cond interface{}
+	switch event {
+	case FollowRequestType:
+		cond = BroadcasterUserIDCondition{"38570305"}
+	case RaidRequestType:
+		cond = ToBroadcasterUserIDCondition{"38570305"}
+	}
 
-	transport := struct {
-		Method   string `json:"method"`
-		Callback string `json:"callback"`
-		Secret   string `json:"secret"`
-	}{
+	transport := Transport{
 		Method:   "webhook",
 		Callback: os.Getenv("TWITCH_CALLBACK_URL"),
 		Secret:   "supersecretsauce",
 	}
-	data := struct {
-		Type      string `json:"type"`
-		Version   string `json:"version"`
-		Condition struct {
-			BroadCasterUserID string `json:"broadcaster_user_id"`
-		} `json:"condition"`
-		Transport struct {
-			Method   string `json:"method"`
-			Callback string `json:"callback"`
-			Secret   string `json:"secret"`
-		} `json:"transport"`
-	}{
+
+	data := EventSubRequest{
 		Type:      event,
 		Version:   "1",
 		Condition: cond,
 		Transport: transport,
 	}
+
 	j, err := json.Marshal(data)
 	if err != nil {
 		log.Println("Could not marshal data to sub request: ", err)
@@ -297,62 +366,65 @@ func subscribe(event string) {
 }
 
 func EventSubCallback(w http.ResponseWriter, r *http.Request) {
-	respStruct := struct {
-		Challenge    string
-		Subscription struct {
-			ID        string
-			Status    string
-			Type      string
-			Version   string
-			Cost      int
-			Condition struct {
-				BroadCasterUserID string `json:"broadcaster_user_id"`
-			}
-			Transport struct {
-				Method   string
-				Callback string
-			}
-			CreatedAt time.Time `json:"created_at"`
-		}
-		Event struct {
-			UserID               string `json:"user_id"`
-			UserLogin            string `json:"user_login"`
-			UserName             string `json:"user_name"`
-			BroadcasterUserID    string `json:"broadcaster_user_id"`
-			BroadcasterUserLogin string `json:"broadcaster_user_login"`
-			BroadcasterUserName  string `json:"broadcaster_user_name"`
-		}
-	}{}
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.Println("couldn't read bytes from request body: ", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-	if ok := validSignature(r.Header, body); !ok {
-		http.Error(w, "Forbidden", http.StatusForbidden)
-		return
-	}
-	fmt.Println(r.Header.Get("Twitch-Eventsub-Message-Type"))
-	err = json.Unmarshal(body, &respStruct)
-	if err != nil {
-		log.Println("Couldn't unmarshal response body: ", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
 	switch r.Header.Get("Twitch-Eventsub-Message-Type") {
 	case "webhook_callback_verification":
+		respStruct := struct {
+			Challenge string
+		}{}
+		err := responseBodyToStruct(w, r, &respStruct)
+		if err != nil {
+			return
+		}
 		fmt.Fprintln(w, respStruct.Challenge)
 	case "notification":
-		if r.Header.Get("Twitch-Eventsub-Subscription-Type") == "channel.follow" && respStruct.Event.BroadcasterUserID == "38570305" {
+		if r.Header.Get("Twitch-Eventsub-Subscription-Type") == "channel.follow" {
+
+			cond := BroadcasterUserIDCondition{}
+			notification := FollowNotification{}
+			notification.Subscription.Condition = cond
+			responseBodyToStruct(w, r, &notification)
+			if notification.Event.BroadcasterUserID != "38570305" {
+				break
+			}
 			// notify subscribers of the follow event providing the username
 			for _, f := range followEventSubscriptions {
-				f(respStruct.Event.UserName)
+				f(notification.Event.UserName)
+			}
+		} else if r.Header.Get("Twitch-Eventsub-Subscription-Type") == RaidRequestType {
+			cond := ToBroadcasterUserIDCondition{}
+			notification := RaidNotification{}
+			notification.Subscription.Condition = cond
+			responseBodyToStruct(w, r, &notification)
+			for _, f := range raidEventSubscriptions {
+				f("someone", 1)
 			}
 		}
 		w.WriteHeader(200)
+	default:
+		http.Error(w, "Forbidden", http.StatusForbidden)
 	}
+}
 
+func responseBodyToStruct(w http.ResponseWriter, request *http.Request, dataStruct interface{}) error {
+	// maybe validate dataStruct? a bad struct will cause errors anyhow I guess for now.
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Println("couldn't read bytes from request body: ", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return err
+	}
+	if ok := validSignature(request.Header, body); !ok {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return err
+	}
+	fmt.Println(request.Header.Get("Twitch-Eventsub-Message-Type"))
+	err = json.Unmarshal(body, dataStruct)
+	if err != nil {
+		log.Println("Couldn't unmarshal response body: ", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return err
+	}
+	return nil
 }
 
 func validSignature(headers http.Header, bodyBytes []byte) bool {
@@ -455,5 +527,5 @@ func GetAuthStatus() bool {
 }
 
 func SubscribeToFollowEvent(fn func(string)) {
-	followEventSubscriptions = append(followEventSubscriptions, fn)	
+	followEventSubscriptions = append(followEventSubscriptions, fn)
 }
