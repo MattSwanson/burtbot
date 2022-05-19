@@ -105,7 +105,7 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 	if msg.Message == "d" {
 		comm.ToOverlay("right")
 	}
-	if mobileStream {
+	if mobileStream && !strings.HasPrefix(msg.Message, "!") {
 		comm.ToOverlay(fmt.Sprintf("tts false %s says %s", msg.User.DisplayName, msg.Message))
 	}
 
@@ -312,6 +312,9 @@ func commandList(w http.ResponseWriter, r *http.Request) {
 }
 
 func FollowAlertToOverlay(username string) {
+	if mobileStream {
+		comm.ToOverlay(fmt.Sprintf("tts false %s is now following! Right now, they are following you watch out", username))
+	}
 	comm.ToOverlay(fmt.Sprintf("newfollow %s", username))
 }
 
@@ -392,4 +395,8 @@ func CheckArgsCB(args []string, count int, callback func(string), argStruct inte
 		return false, err
 	}
 	return true, nil
+}
+
+func SetMobileStream(b bool) {
+	mobileStream = b
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -75,10 +74,6 @@ func main() {
 
 func handleMessage(msg twitch.PrivateMessage) {
 	console.ShowMessageOnConsole(msg)
-	if mobileStream {
-		toSay := fmt.Sprintf("%s says %s", msg.User.DisplayName, msg.Message)
-		comm.ToOverlay(fmt.Sprintf("tts false %s", toSay))
-	}
 	go handler.HandleMsg(msg)
 }
 
@@ -113,5 +108,6 @@ func servicesAuthPage(w http.ResponseWriter, r *http.Request) {
 
 func toggleMobileStream(w http.ResponseWriter, r *http.Request) {
 	mobileStream = !mobileStream
+	commands.SetMobileStream(mobileStream)
 	servicesAuthPage(w, r)
 }
