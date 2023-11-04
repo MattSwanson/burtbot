@@ -58,6 +58,7 @@ type ChannelInfo struct {
 
 type BroadcasterUserIDCondition struct {
 	BroadcasterUserID string `json:"broadcaster_user_id"`
+	ModeratorUserID   string `json:"moderator_user_id"`
 }
 
 type ToBroadcasterUserIDCondition struct {
@@ -150,6 +151,8 @@ func Init() {
 		eventSubs := getSubscriptions()
 		followSub, raidSub := false, false
 		for _, es := range eventSubs {
+			log.Println(es)
+			//deleteSubscription(es.ID)
 			if es.Type == FollowRequestType {
 				followSub = true
 				continue
@@ -158,7 +161,6 @@ func Init() {
 				raidSub = true
 				continue
 			}
-			//deleteSubscription(es.ID)
 		}
 		if !followSub {
 			subscribe(FollowRequestType)
@@ -216,7 +218,7 @@ func GetAuthLink() string {
 		"client_id":     {os.Getenv("BB_APP_CLIENT_ID")},
 		"redirect_uri":  {"https://burtbot.app/twitch_authcb"},
 		"response_type": {"code"},
-		"scope":         {"user:read:email"},
+		"scope":         {"user:read:email moderator:read:followers"},
 	}
 	buf.WriteString(v.Encode())
 	return buf.String()
@@ -318,9 +320,14 @@ func GetChannelInfo(broadcaster_id string) ChannelInfo {
 func subscribe(event string) {
 	u := "https://api.twitch.tv/helix/eventsub/subscriptions"
 	var cond interface{}
+	version := "1"
 	switch event {
 	case FollowRequestType:
-		cond = BroadcasterUserIDCondition{"38570305"}
+		cond = BroadcasterUserIDCondition{
+			BroadcasterUserID: "38570305",
+			ModeratorUserID:   "38570305",
+		}
+		version = "2"
 	case RaidRequestType:
 		cond = ToBroadcasterUserIDCondition{"38570305"}
 	}
@@ -333,7 +340,7 @@ func subscribe(event string) {
 
 	data := EventSubRequest{
 		Type:      event,
-		Version:   "1",
+		Version:   version,
 		Condition: cond,
 		Transport: transport,
 	}
@@ -482,7 +489,7 @@ func deleteSubscription(id string) {
 		log.Println("could not make request to cancel sub", err)
 		return
 	}
-	fmt.Println("Cancel sub req status: ", resp.StatusCode)
+	log.Println("Cancel sub req status: ", resp.StatusCode)
 }
 
 func getSubscriptions() []EventSubscription {
@@ -528,4 +535,8 @@ func GetAuthStatus() bool {
 
 func SubscribeToFollowEvent(fn func(string)) {
 	followEventSubscriptions = append(followEventSubscriptions, fn)
+}
+
+func SubscribeToRaidEvent(fn func(string, int)) {
+	raidEventSubscriptions = append(raidEventSubscriptions, fn)
 }
