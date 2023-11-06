@@ -21,7 +21,6 @@ func (m *Msg) PostInit() {
 }
 
 func (m *Msg) Run(msg twitch.PrivateMessage) {
-	return
 	if !IsMod(msg.User) {
 		return
 	}
