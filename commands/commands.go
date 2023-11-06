@@ -84,6 +84,7 @@ func RegisterCommand(pattern string, c Command) error {
 
 func (handler *CmdHandler) PostInit() {
 	helix.SubscribeToFollowEvent(FollowAlertToOverlay)
+	helix.SubscribeToRaidEvent(RaidAlertToOverlay)
 	for _, c := range handler.Commands {
 		c.PostInit()
 	}
@@ -124,6 +125,14 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 			return
 		}
 		FollowAlertToOverlay(args[1])
+	}
+
+	if IsMod(msg.User) && args[0] == "raidtest" {
+		comm.ToOverlay("raidincoming person 5")
+	}
+
+	if args[0] == "resetdistance" {
+		comm.ToOverlay("distance reset")
 	}
 
 	if args[0] == "mobilestream" {
@@ -316,6 +325,10 @@ func FollowAlertToOverlay(username string) {
 		comm.ToOverlay(fmt.Sprintf("tts false %s is now following! Right now, they are following you watch out", username))
 	}
 	comm.ToOverlay(fmt.Sprintf("newfollow %s", username))
+}
+
+func RaidAlertToOverlay(username string, viewers int) {
+	comm.ToOverlay(fmt.Sprintf("raidincoming %s %d", username, viewers))
 }
 
 // CheckArgs will check to make sure the args slice is at least the correct length
