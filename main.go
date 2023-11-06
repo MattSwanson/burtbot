@@ -64,6 +64,7 @@ func main() {
 	serviceAuthStatus = &ServiceAuthStatus{}
 	web.AuthHandleFunc("/services_auth", servicesAuthPage)
 	web.AuthHandleFunc("/toggle_mobile", toggleMobileStream)
+	web.AuthHandleFunc("/web_command", processWebCommand)
 	web.StartWebServer()
 
 	err = client.Connect()
@@ -109,5 +110,20 @@ func servicesAuthPage(w http.ResponseWriter, r *http.Request) {
 func toggleMobileStream(w http.ResponseWriter, r *http.Request) {
 	mobileStream = !mobileStream
 	commands.SetMobileStream(mobileStream)
+	servicesAuthPage(w, r)
+}
+
+func processWebCommand(w http.ResponseWriter, r *http.Request) {
+	// Get a command from the request form
+	// Decide what to do with it
+	// Reload the commands page until we do something better..
+	if err := r.ParseForm(); err != nil {
+		log.Println("Error parsing form in web command: ", err.Error())
+		w.WriteHeader(500)
+		return
+	}
+	// Perhaps we should just construct a fake twitch message and send it to the command handler instead of
+	// sending commands to the overlay directly
+	comm.ToOverlay("steam random")
 	servicesAuthPage(w, r)
 }
