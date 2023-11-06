@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>burtbot command list</title>
+    <title>burtbot command center</title>
     <style>
         body {
             font-family: monospace;
@@ -21,6 +21,11 @@
         Spotify: {{ if not .SpotifyAuth }} <a href="{{ .SpotifyLink }}">Auth</a> {{ else }} <span class="authd">Authenticated</span> {{ end }}
         <br/>Twitch: {{ if not .TwitchAuth }} <a href="{{ .TwitchLink }}">Auth</a> {{ else }} <span class="authd">Authenticated</span> {{ end }}
         <br/>Mobile Stream: {{ if not .MobileStream }} <a href="/toggle_mobile">Disabled</a> {{ else }} <a href="/toggle_mobile"><span class="authd">Enabled</span></a> {{ end }}
+    </div>
+
+    <div>
+        <h1> Things to use for stuff </h1>
+        <a href="/web_command?comm=press">Test</a>
     </div>
 </body>
 </html>
