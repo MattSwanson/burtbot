@@ -80,7 +80,7 @@ func secretCommands(msg twitch.PrivateMessage) {
 	if strings.ToLower(msg.User.DisplayName) == "velusip" {
 		/*	if time.Since(lastArrowMsg).Seconds() > 21600 {
 			comm.ToChat(msg.Channel, " Arrow keys all day -> -> -> -> -> -> -> -> -> -> -> ")
-			comm.ToOverlay("tts true For absolutely no reason, everyone hold down your right arrow key for a very long time")
+			comm.ToOverlay("tts true false For absolutely no reason, everyone hold down your right arrow key for a very long time")
 			m := MarqueeMsg{
 				RawMessage: " -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> -> ",
 			}

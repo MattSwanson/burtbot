@@ -107,7 +107,7 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 		comm.ToOverlay("right")
 	}
 	if mobileStream && !strings.HasPrefix(msg.Message, "!") {
-		comm.ToOverlay(fmt.Sprintf("tts false %s says %s", msg.User.DisplayName, msg.Message))
+		comm.ToOverlay(fmt.Sprintf("tts false false %s says %s", msg.User.DisplayName, msg.Message))
 	}
 
 	if !strings.HasPrefix(msg.Message, "!") {
@@ -216,7 +216,7 @@ func (handler *CmdHandler) HelpAll(channel string) {
 	lastHelpAll = time.Now()
 	for _, cmd := range handler.Commands {
 		for _, h := range cmd.Help() {
-			comm.ToOverlay(fmt.Sprintf("tts true %s", h))
+			comm.ToOverlay(fmt.Sprintf("tts true true %s", h))
 			comm.ToOverlay(fmt.Sprintf("marquee once {\"rawMessage\":\"%s\"}", h))
 		}
 	}
@@ -322,7 +322,7 @@ func commandList(w http.ResponseWriter, r *http.Request) {
 
 func FollowAlertToOverlay(username string) {
 	if mobileStream {
-		comm.ToOverlay(fmt.Sprintf("tts false %s is now following! Right now, they are following you watch out", username))
+		comm.ToOverlay(fmt.Sprintf("tts false false %s is now following! Right now, they are following you watch out", username))
 	}
 	comm.ToOverlay(fmt.Sprintf("newfollow %s", username))
 }
