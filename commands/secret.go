@@ -10,6 +10,8 @@ import (
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
+var lastSuperHelp time.Time
+var superHelpCD = 21600.0 // seconds
 var lastQuacksplosion time.Time
 var lastMK time.Time
 var lastArrowMsg time.Time
@@ -44,6 +46,13 @@ func secretCommands(msg twitch.PrivateMessage) {
 		lastMK = time.Now()
 	}
 
+	if name == "specterbar" &&
+		msg.Message == "!help" &&
+		time.Since(lastSuperHelp).Seconds() > superHelpCD {
+		// Run the super help here
+		lastSuperHelp = time.Now()
+	}
+
 	lower := strings.ToLower(msg.Message)
 	if strings.Contains(lower, "one time") {
 		comm.ToChat(msg.Channel, "ONE TIME!")
@@ -67,6 +76,12 @@ func secretCommands(msg twitch.PrivateMessage) {
 			comm.ToOverlay("tux")
 			lastTux = time.Now()
 		}
+	}
+
+	if strings.HasPrefix(lower, "!prossess") {
+		// send a commad to the overlay to display the thing
+		comm.ToOverlay("prossess")
+		comm.ToChat(msg.Channel, "You now prossess the Eye of Dracula.")
 	}
 
 	if strings.HasPrefix(lower, "!real") {
