@@ -135,6 +135,26 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 		comm.ToOverlay("distance reset")
 	}
 
+	if args[0] == "remind" {
+		if !IsMod(msg.User) {
+			return
+		}
+		if len(args) < 3 {
+			comm.ToChat(msg.Channel, "Not enough args for the thing you wanted to do which wa")
+			return
+		}
+		duration, err := time.ParseDuration(args[1])
+		if err != nil {
+			comm.ToChat(msg.Channel, "Duration is an invalid time duration deal with it")
+			return
+		}
+		message := strings.Join(args[2:], " ")
+		go func() {
+			time.Sleep(duration)
+			comm.ToOverlay(fmt.Sprintf("tts false true %s", message))
+		}()
+	}
+
 	if args[0] == "mobilestream" {
 		mobileStream = !mobileStream
 		s := "disabled"
