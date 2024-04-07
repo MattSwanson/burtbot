@@ -26,6 +26,9 @@ func (cs *Stream) Run(msg twitch.PrivateMessage) {
 	if args[1] == "stop" {
 		comm.ToOverlay("stream stop")
 	}
+	if args[1] == "flip" {
+		comm.ToOverlay("stream flip")
+	}
 }
 
 func (cs *Stream) PostInit() {

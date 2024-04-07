@@ -70,7 +70,8 @@ func AuthHandleFunc(pattern string, handlerFunc func(http.ResponseWriter, *http.
 func authenticateRequest(r *http.Request) bool {
 	remote := strings.Split(r.RemoteAddr, ":")
 	if remote[0] != os.Getenv("OVERLAY_IP") &&
-		remote[0] != localIP && remote[0] != "98.59.109.141" {
+		remote[0] != localIP && remote[0] != "98.59.109.141" &&
+		remote[0] != "174.229.177.169" {
 		return false
 	}
 	return true
@@ -89,7 +90,7 @@ func handleMetrics(w http.ResponseWriter, r *http.Request) {
 
 	//TODO pack into json to send in one go
 	comm.ToOverlay(fmt.Sprintf("hr %s", r.Form.Get("hr")))
-	//comm.ToOverlay(fmt.Sprintf("cars %s", r.Form.Get("cars")))
+	comm.ToOverlay(fmt.Sprintf("cars %s", r.Form.Get("cars")))
 	comm.ToOverlay(fmt.Sprintf("speed %s", r.Form.Get("speed")))
 	comm.ToOverlay(fmt.Sprintf("distance %s", r.Form.Get("dist")))
 }

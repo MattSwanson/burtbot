@@ -132,6 +132,9 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 	}
 
 	if args[0] == "resetdistance" {
+		if !IsMod(msg.User) {
+			return
+		}
 		comm.ToOverlay("distance reset")
 	}
 
