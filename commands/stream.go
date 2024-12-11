@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/MattSwanson/burtbot/comm"
@@ -28,6 +29,9 @@ func (cs *Stream) Run(msg twitch.PrivateMessage) {
 	}
 	if args[1] == "flip" {
 		comm.ToOverlay("stream flip")
+	}
+	if args[1] == "scene" && len(args) >= 3 {
+		comm.ToOverlay(fmt.Sprintf("stream scene %s", args[2]))
 	}
 }
 
