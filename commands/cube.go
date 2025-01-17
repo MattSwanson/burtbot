@@ -2,6 +2,8 @@ package commands
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"strings"
 
 	"github.com/MattSwanson/burtbot/comm"
@@ -12,6 +14,7 @@ type Cube struct{}
 
 var cube *Cube = &Cube{}
 var cubeRunning bool
+var cubeStartingState []byte
 
 var validMoveChars []byte = []byte{
 	'R', 'r', 'L', 'l', 'U', 'u', 'D', 'd', 'B', 'b', 'F', 'f',
@@ -19,7 +22,17 @@ var validMoveChars []byte = []byte{
 }
 
 func init() {
+	comm.SubscribeToReply("cube", cube.SaveCube)
 	RegisterCommand("cube", cube)
+	loadStateFromFile()
+}
+
+func loadStateFromFile() {
+	var err error
+	cubeStartingState, err = os.ReadFile("cube.json")
+	if err != nil {
+		log.Println("Oh noes, couldn't load cube state from file :( ", err)
+	}
 }
 
 func (c *Cube) Run(msg twitch.PrivateMessage) {
@@ -39,7 +52,8 @@ func (c *Cube) Run(msg twitch.PrivateMessage) {
 		}
 		comm.ToOverlay(fmt.Sprintf("cube move %s", args[2]))
 	case "start":
-		comm.ToOverlay("cube start")
+		loadStateFromFile()
+		comm.ToOverlay(fmt.Sprintf("cube start %s", string(cubeStartingState)))
 	case "stop":
 		comm.ToOverlay("cube stop")
 	case "reset":
@@ -59,6 +73,15 @@ func (c *Cube) Help() []string {
 	return []string{
 		"!cube move [move] to manipulate the cube",
 		"See https://ruwix.com/the-rubiks-cube/notation/ for move notation",
+	}
+}
+
+func (c *Cube) SaveCube(args []string) {
+	if len(args) < 2 {
+		return
+	}
+	if err := os.WriteFile("cube.json", []byte(args[1]), 0644); err != nil {
+		log.Println("Error saving cube state to file: ", err)
 	}
 }
 
