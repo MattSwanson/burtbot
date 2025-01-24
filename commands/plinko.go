@@ -2,25 +2,26 @@ package commands
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/big"
 	"math/rand"
-	"strings"
 	"strconv"
+	"strings"
 	"time"
-	"encoding/json"
 
 	"github.com/MattSwanson/burtbot/comm"
 	"github.com/gempir/go-twitch-irc/v2"
 )
 
 type Plinko struct {
-	running      bool
+	running bool
 }
 
 var plinko *Plinko = &Plinko{}
 var autoCancel context.CancelFunc
+
 func init() {
 	comm.SubscribeToReply("plinko", plinko.HandleResponse)
 	comm.SubscribeToReply("reset", plinko.Stop)
@@ -37,6 +38,11 @@ func (p *Plinko) Run(msg twitch.PrivateMessage) {
 		return
 	}
 
+	userColor := msg.User.Color
+	if userColor == "" {
+		userColor = "#0000FF"
+	}
+
 	if args[1] == "auto" && IsMod(msg.User) {
 		if autoCancel != nil {
 			autoCancel()
@@ -45,20 +51,20 @@ func (p *Plinko) Run(msg twitch.PrivateMessage) {
 		}
 		var ctx context.Context
 		ctx, autoCancel = context.WithCancel(context.Background())
-		go func(ctx context.Context, user twitch.User, channel string){
+		go func(ctx context.Context, user twitch.User, channel string) {
 			for {
 				select {
-					case <-ctx.Done():
-						comm.ToChat(channel, "Stopping auto plinko")
+				case <-ctx.Done():
+					comm.ToChat(channel, "Stopping auto plinko")
+					return
+				default:
+					r := rand.Intn(5)
+					tokenCount := GetTokenCount(user)
+					if tokenCount.Cmp(big.NewInt(0)) == -1 || tokenCount.Cmp(big.NewInt(0)) == 0 {
+						comm.ToChat(channel, "You're out of tokens, stopping auto plinko")
 						return
-					default:
-						r := rand.Intn(5)
-						tokenCount := GetTokenCount(user)
-						if tokenCount.Cmp(big.NewInt(0)) == -1 || tokenCount.Cmp(big.NewInt(0)) == 0 {
-							comm.ToChat(channel, "You're out of tokens, stopping auto plinko")
-							return
-						}
-						comm.ToOverlay(fmt.Sprintf("plinko drop %d %s %s", r, user.DisplayName, user.Color))
+					}
+					comm.ToOverlay(fmt.Sprintf("plinko drop %d %s %s", r, user.DisplayName, userColor))
 				}
 				time.Sleep(time.Second * 5)
 			}
@@ -84,7 +90,7 @@ func (p *Plinko) Run(msg twitch.PrivateMessage) {
 			return
 		}
 		DeductTokens(msg.User.Name, big.NewInt(int64(cost)))
-		comm.ToOverlay(fmt.Sprintf("plinko drop %s %s %s", args[2], msg.User.DisplayName, msg.User.Color))
+		comm.ToOverlay(fmt.Sprintf("plinko drop %s %s %s", args[2], msg.User.DisplayName, userColor))
 		return
 	}
 
@@ -104,7 +110,7 @@ func (p *Plinko) Run(msg twitch.PrivateMessage) {
 			return
 		}
 		DeductTokens(msg.User.Name, n)
-		comm.ToOverlay(fmt.Sprintf("plinko drop %s %s %s %d", args[2], msg.User.DisplayName, msg.User.Color, n))
+		comm.ToOverlay(fmt.Sprintf("plinko drop %s %s %s %d", args[2], msg.User.DisplayName, userColor, n))
 	}
 }
 
