@@ -106,6 +106,7 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 	if msg.Message == "d" {
 		comm.ToOverlay("right")
 	}
+	comm.ToOverlay("lights set 0")
 	if mobileStream && !strings.HasPrefix(msg.Message, "!") {
 		comm.ToOverlay(fmt.Sprintf("tts false false %s says %s", msg.User.DisplayName, msg.Message))
 	}
