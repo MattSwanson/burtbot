@@ -62,6 +62,11 @@ func (c *Cube) Run(msg twitch.PrivateMessage) {
 		comm.ToOverlay("cube shuffle")
 	case "movecount":
 		comm.ToOverlay("cube movecount")
+	case "pos":
+		if len(args) < 5 || !IsMod(msg.User) {
+			return
+		}
+		comm.ToOverlay(fmt.Sprintf("cube pos %s %s %s", args[2], args[3], args[4]))
 	}
 }
 
