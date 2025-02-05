@@ -227,7 +227,8 @@ func (handler *CmdHandler) HandleJoinMsg(msg twitch.UserJoinMessage) {
 func IsMod(user twitch.User) bool {
 	_, bcOk := user.Badges["broadcaster"]
 	_, modOk := user.Badges["moderator"]
-	return bcOk || modOk
+	_, vipOk := user.Badges["vip"]
+	return bcOk || modOk || vipOk
 }
 
 // Show all the commands help text.. all of them... at once.
