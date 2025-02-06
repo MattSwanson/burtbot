@@ -19,8 +19,6 @@ var lastMiracle time.Time
 var lastTux time.Time
 var lastMessage string
 var lastMsg twitch.PrivateMessage
-var schlorpLock = false
-var schlorpCD = 10
 
 func init() {
 	SubscribeToRawMsg(secretCommands)
@@ -110,22 +108,9 @@ func secretCommands(msg twitch.PrivateMessage) {
 
 	if strings.Compare(msg.User.Name, lastMsg.User.Name) == 0 && strings.Compare(msg.Message, lastMessage+" "+lastMessage) == 0 {
 		// break the pyramid with a schlorp
-		comm.ToChat(msg.Channel, "tjportSchlorp1 tjportSchlorp2 tjportSchlorp3")
-	}
-	lower = strings.ToLower(msg.Message)
-	if strings.Contains(lower, "schlorp") {
-		if !schlorpLock {
-			schlorpLock = true
-			go unlockSchlorp()
-			comm.ToChat(msg.Channel, "tjportSchlorp1 tjportSchlorp2 tjportSchlorp3")
-		}
+		comm.ToChat(msg.Channel, "why you do dis")
 	}
 
 	lastMessage = msg.Message
 	lastMsg = msg
-}
-
-func unlockSchlorp() {
-	time.Sleep(time.Second * time.Duration(schlorpCD))
-	schlorpLock = false
 }
