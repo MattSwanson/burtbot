@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"reflect"
@@ -137,6 +138,12 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 			return
 		}
 		comm.ToOverlay("distance reset")
+	}
+
+	if args[0] == "roll" {
+		// just 1-100 for now
+		roll := rand.Intn(100) + 1
+		comm.ToChat(msg.Channel, fmt.Sprintf("@%s rolled a %d out of 100", msg.User.DisplayName, roll))
 	}
 
 	if args[0] == "remind" {
