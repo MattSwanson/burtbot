@@ -1142,29 +1142,6 @@ func rollItem(tc *TreasureClass, mLvl, iLvl int) string {
 	return ""
 }
 
-func getDCloneStatus() []DCloneServerStatus {
-	statuses := []DCloneServerStatus{}
-	req, err := http.NewRequest("GET", DCloneAPIURL, nil)
-	if err != nil {
-		log.Println("Error creating request for DClone status: ", err.Error())
-		return
-	}
-	req.Header.Set("Accept", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Println("Error making http request for DClone status: ", err.Error())
-		return
-	}
-	defer resp.Body.Close()
-	err = json.NewDecoder(resp.Body).Decode(&statuses)
-	if err != nil {
-		log.Println("Couldn't decode JSON from DClone status API: ", err.Error())
-		return
-	}
-
-	return statuses
-}
-
 func (d *d2) Help() []string {
 	return []string{
 		"!d2 unique [item] - search for a unique item",
