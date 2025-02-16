@@ -55,6 +55,9 @@ func secretCommands(msg twitch.PrivateMessage) {
 	if strings.Contains(lower, "one time") {
 		comm.ToChat(msg.Channel, "ONE TIME!")
 	}
+	if strings.Contains(lower, "duck") {
+		comm.ToOverlay("quack 1")
+	}
 	if count := strings.Count(lower, "quack"); count > 0 {
 		comm.ToOverlay(fmt.Sprintf("quack %d", count))
 		if msg.User.ID == "445815779" {
