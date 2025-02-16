@@ -92,6 +92,9 @@ func (handler *CmdHandler) PostInit() {
 }
 
 func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
+	if msg.Message == "!" {
+		return
+	}
 	for _, fn := range rawMsgSubscriptions {
 		fn(msg)
 	}
