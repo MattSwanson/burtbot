@@ -40,8 +40,8 @@ func (s *Slots) Run(msg twitch.PrivateMessage) {
 			comm.ToChat(msg.Channel, "You must give a bet amount to pull the slots")
 			return
 		}
-		_, err := strconv.Atoi(args[2])
-		if err != nil {
+		val, err := strconv.Atoi(args[2])
+		if err != nil || val <= 0 {
 			comm.ToChat(msg.Channel, "Bet amount is invalid, please try again with a number.")
 			return
 		}
