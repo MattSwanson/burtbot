@@ -31,6 +31,7 @@ func init() {
 func StartWebServer() {
 
 	// Add handlers for http stuffs
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.HandleFunc("/twitch_authcb", helix.TwitchAuthCb)
 	http.HandleFunc("/eventsub_cb", helix.EventSubCallback)
 	http.HandleFunc("/metrics", handleMetrics)

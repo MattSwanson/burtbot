@@ -6,23 +6,16 @@
 </head>
 <body>
 
-    <h2>Now Playing: {{ .NowPlaying.SongTitle }} - {{ range .NowPlaying.SongArtists }} {{ . }} {{ end }} <a href="{{ .NowPlaying.SongLink }}"/>Link</a></h2>
-    <ul>
-    {{ range $index, $item := .CurrentQueue }}
-    <li>
-        <strong>{{ $item.SongTitle }} - {{ range $item.SongArtists }} {{ . }} {{ end }}</strong>({{$item.Service}}) - <a href="{{ .SongLink }}"/>Link</a> - {{ $item.User }} - Duration: {{ $item.Duration }} {{ $item.Added }}
-        <a href="/play_request?id={{ $index }}">Play Now</a>
-        <a href="/remove_request?id={{ $index }}">Remove</a>
-    </li>
-    {{ end }}
+    <h2>The BurtBot song request queue 3000</h2>
+    <input id="autoplay-cb" type="checkbox" />
+    <label for="autoplay-cb">Autoplay Enabled</label>
+    <input id="spotifyToken" type="hidden" value="{{ .SpotifyToken }}"/>
+    <ul id="requestQueue"></ul>
+    <ul id="lastPlayed">
     </ul>
-
-    <ul>
-    {{ range .History }}
-    <li> 
-        {{ .SongTitle }} - {{ range .SongArtists }} {{ . }} {{ end }}({{.Service}}) - <a href="{{ .SongLink }}"/>Link</a> - {{ .User }}
-    </li>
-    {{ end }}
-    </ul>
+    <div id="player"></div>
+    <button id="togglePlay">Toggle Play</button>
+    <script src="https://sdk.scdn.co/spotify-player.js"></script>
+    <script src="/static/js/request_queue.js" referrerpolicy="origin"></script>
 </body>
 </html>

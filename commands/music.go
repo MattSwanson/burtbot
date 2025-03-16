@@ -31,6 +31,8 @@ const requestQueueURL = "https://burtbot.app/request_queue"
 const requestHistorySize = 5
 
 var spotifyAuth = spotify.NewAuthenticator("https://burtbot.app/spotify_authcb",
+	spotify.ScopeStreaming,
+	spotify.ScopeUserReadEmail,
 	spotify.ScopeUserReadPrivate,
 	spotify.ScopeUserReadCurrentlyPlaying,
 	spotify.ScopeUserReadRecentlyPlayed,
@@ -50,6 +52,7 @@ type SongRequest struct {
 	SongArtists []string
 	SongLink    string
 	Service     string
+	SongID      string
 	User        string
 	Added       time.Time
 	Duration    int
@@ -84,6 +87,7 @@ func init() {
 	web.AuthHandleFunc("/request_queue", showSongRequestQueue)
 	web.AuthHandleFunc("/remove_request", removeRequest)
 	web.AuthHandleFunc("/play_request", setRequestPlaying)
+	web.AuthHandleFunc("/current_queue", getCurrentRequestQueue)
 	RegisterCommand("music", mu)
 }
 
@@ -103,7 +107,8 @@ func (m *Music) PostInit() {
 				if !playerState.CurrentlyPlaying.Playing {
 					if nowPlaying != "" {
 						nowPlaying = ""
-						comm.ToOverlay("nowplaying off")
+						// disable for now until we figure out how we are going to deal with this
+						// comm.ToOverlay("nowplaying off")
 					}
 				} else {
 					track, playing := m.getCurrentTrackTitle()
@@ -374,6 +379,7 @@ func processRequest(link string, user string) (*SongRequest, error) {
 
 	service := "Unknown"
 	songTitle := "Unknown"
+	songId := "Unknown"
 	songArtists := []string{"Unknown"}
 	duration := 0
 	if strings.Contains(link, "open.spotify.com") {
@@ -390,6 +396,7 @@ func processRequest(link string, user string) (*SongRequest, error) {
 			songArtists = append(songArtists, artist.Name)
 		}
 		duration = info.Duration
+		songId = spotifyID
 	} else if strings.Contains(link, "youtube.com") || strings.Contains(link, "youtu.be") {
 		service = "Youtube"
 		videoInfo, err := getYoutubeVideoInfoFromLink(link)
@@ -400,11 +407,13 @@ func processRequest(link string, user string) (*SongRequest, error) {
 		songTitle = videoInfo.Snippet.Title
 		songArtists = []string{videoInfo.Snippet.Author}
 		duration = youtubeVideoDurationToMS(videoInfo.ContentDetails.Duration)
+		songId = extractYoutubeVideoIDFromLink(link)
 	}
 	sr := SongRequest{
 		SongTitle:   songTitle,
 		SongArtists: songArtists,
 		SongLink:    link,
+		SongID:      songId,
 		User:        user,
 		Service:     service,
 		Added:       time.Now(),
@@ -604,6 +613,30 @@ func removeRequestFromQueue(id int) {
 }
 
 func showSongRequestQueue(w http.ResponseWriter, r *http.Request) {
+	token, err := mu.SpotifyClient.Token()
+	accessToken := ""
+	if token != nil {
+		accessToken = token.AccessToken
+	}
+	d := struct {
+		SpotifyToken string
+	}{
+		SpotifyToken: accessToken,
+	}
+	err = songRequestQueueTpl.ExecuteTemplate(w, "song_request_queue.gohtml", d)
+	if err != nil {
+		fmt.Fprint(w, err.Error())
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+}
+
+func getCurrentRequestQueue(w http.ResponseWriter, r *http.Request) {
+	token, err := mu.SpotifyClient.Token()
+	accessToken := ""
+	if token != nil {
+		accessToken = token.AccessToken
+	}
+	// Return the current queue as json for processing by the request queue client
 	nowPlaying := &SongRequest{}
 	if nowPlayingRequest != nil {
 		nowPlaying = nowPlayingRequest
@@ -612,16 +645,21 @@ func showSongRequestQueue(w http.ResponseWriter, r *http.Request) {
 		CurrentQueue []*SongRequest
 		NowPlaying   *SongRequest
 		History      []*SongRequest
+		SpotifyToken string
 	}{
 		CurrentQueue: requestQueue,
 		NowPlaying:   nowPlaying,
 		History:      lastRequests,
+		SpotifyToken: accessToken,
 	}
-	err := songRequestQueueTpl.ExecuteTemplate(w, "song_request_queue.gohtml", d)
+	j, err := json.Marshal(d)
 	if err != nil {
-		fmt.Fprint(w, err.Error())
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		log.Println("Error marshaling request queue: ", err)
+		http.Error(w, "oopsie", http.StatusInternalServerError)
+		return
 	}
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, "%s", j)
 }
 
 func setRequestPlaying(w http.ResponseWriter, r *http.Request) {
@@ -641,7 +679,7 @@ func setRequestPlaying(w http.ResponseWriter, r *http.Request) {
 	if nowPlayingRequest.Service == "Youtube" {
 		comm.ToOverlay(fmt.Sprintf("nowplaying %s - %s", nowPlayingRequest.SongTitle, nowPlayingRequest.SongArtists[0]))
 	}
-	http.Redirect(w, r, requestQueueURL, http.StatusSeeOther)
+	fmt.Fprint(w, "fine.")
 }
 
 func removeRequest(w http.ResponseWriter, r *http.Request) {
@@ -651,5 +689,5 @@ func removeRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	removeRequestFromQueue(id)
-	http.Redirect(w, r, requestQueueURL, http.StatusSeeOther)
+	fmt.Fprint(w, "request removed.")
 }
