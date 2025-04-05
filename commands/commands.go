@@ -217,7 +217,15 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 				handler.Client.Say(msg.Channel, h)
 			}
 		}
-		go cmd.Run(msg)
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Println("Recovered from panic in command handler", r, "from cmd: ", msg.Message)
+					comm.ToChat(msg.Channel, "Oh no, burtbot broke burtbot's brian. Maybe use the commands properly not break burtbot's brain.")
+				}
+			}()
+			cmd.Run(msg)
+		}()
 	}
 }
 
