@@ -79,10 +79,6 @@ func (handler *CmdHandler) RegisterCommand(pattern string, c Command) error {
 	return nil
 }
 
-func RegisterCommand(pattern string, c Command) error {
-	return cmdHandler.RegisterCommand(pattern, c)
-}
-
 func (handler *CmdHandler) PostInit() {
 	helix.SubscribeToFollowEvent(FollowAlertToOverlay)
 	helix.SubscribeToRaidEvent(RaidAlertToOverlay)
@@ -121,67 +117,76 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 	msg.Message = handler.InjectAliases(msg.Message)
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
 
-	if args[0] == "clearconsole" {
+	// Handle trivial commands here
+	switch strings.ToLower(args[0]) {
+	case "alias":
+		handler.Alias(msg)
+		return
+	case "clearconsole":
 		console.ClearConsole()
-	}
-
-	if args[0] == "fakefollow" {
+		return
+	case "commands":
+		comm.ToChat(msg.Channel, "See available commands at: https://burtbot.app/commands")
+		return
+	case "fakefollow":
 		if len(args) < 2 {
 			return
 		}
 		FollowAlertToOverlay(args[1])
-	}
-
-	if IsMod(msg.User) && args[0] == "raidtest" {
+		return
+	case "help":
+		handler.HelpAll(msg.Channel)
+		return
+	case "mobilestream":
+		toggleMobileStreamMode(msg)
+		return
+	case "raidtest":
+		if !IsMod(msg.User) {
+			return
+		}
 		comm.ToOverlay("raidincoming person 5")
-	}
-
-	if args[0] == "resetdistance" {
+		return
+	case "resetDistance":
 		if !IsMod(msg.User) {
 			return
 		}
 		comm.ToOverlay("distance reset")
+		return
+	case "roll":
+		roll(msg)
+		return
+	case "remind":
+		remind(msg)
+		return
 	}
 
-	if args[0] == "roll" {
-		// just 1-100 for now
-		roll := rand.Intn(100) + 1
-		comm.ToChat(msg.Channel, fmt.Sprintf("@%s rolled a %d out of 100", msg.User.DisplayName, roll))
-	}
-
-	if args[0] == "remind" {
-		if !IsMod(msg.User) {
-			return
+	// Check the installed commands and execute one if it exists.
+	lcmd := strings.ToLower(args[0])
+	if cmd, ok := handler.Commands[lcmd]; ok {
+		// If a valid command was supplied with help second, show
+		// the available help for the command in the chat
+		if len(args) > 1 && args[1] == "help" {
+			for _, h := range cmd.Help() {
+				handler.Client.Say(msg.Channel, h)
+			}
 		}
-		if len(args) < 3 {
-			comm.ToChat(msg.Channel, "Not enough args for the thing you wanted to do which wa")
-			return
-		}
-		duration, err := time.ParseDuration(args[1])
-		if err != nil {
-			comm.ToChat(msg.Channel, "Duration is an invalid time duration deal with it")
-			return
-		}
-		message := strings.Join(args[2:], " ")
 		go func() {
-			time.Sleep(duration)
-			comm.ToOverlay(fmt.Sprintf("tts false true %s", message))
+			// Recover from any panics that occur in the called command
+			// This keeps the entire bot from crashing due to out of range
+			// errors and the like inside of commands that may not be fully
+			// set up...
+			defer func() {
+				if r := recover(); r != nil {
+					log.Println("Recovered from panic in command handler", r, "from cmd: ", msg.Message)
+					comm.ToChat(msg.Channel, "Oh no, burtbot broke burtbot's brian. Maybe use the commands properly not break burtbot's brain.")
+				}
+			}()
+			cmd.Run(msg)
 		}()
 	}
+}
 
-	if args[0] == "mobilestream" {
-		mobileStream = !mobileStream
-		s := "disabled"
-		if mobileStream {
-			s = "enabled"
-		}
-		comm.ToChat(msg.Channel, fmt.Sprintf("Mobile stream %s", s))
-	}
-
-	lower := strings.ToLower(msg.Message)
-	if lower == "!help" {
-		handler.HelpAll(msg.Channel)
-	}
+func (handler *CmdHandler) Alias(msg twitch.PrivateMessage) {
 	fields := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
 	if IsMod(msg.User) && fields[0] == "alias" {
 		// !alias add alias command
@@ -201,32 +206,6 @@ func (handler *CmdHandler) HandleMsg(msg twitch.PrivateMessage) {
 			}
 		}
 	}
-
-	if lower == "!commands" {
-		comm.ToChat(msg.Channel, "See available commands at: https://burtbot.app/commands")
-		return
-	}
-
-	if len(args) == 0 {
-		return
-	}
-	lcmd := strings.ToLower(args[0])
-	if cmd, ok := handler.Commands[lcmd]; ok {
-		if len(args) > 1 && args[1] == "help" {
-			for _, h := range cmd.Help() {
-				handler.Client.Say(msg.Channel, h)
-			}
-		}
-		go func() {
-			defer func() {
-				if r := recover(); r != nil {
-					log.Println("Recovered from panic in command handler", r, "from cmd: ", msg.Message)
-					comm.ToChat(msg.Channel, "Oh no, burtbot broke burtbot's brian. Maybe use the commands properly not break burtbot's brain.")
-				}
-			}()
-			cmd.Run(msg)
-		}()
-	}
 }
 
 func (handler *CmdHandler) HandlePartMsg(msg twitch.UserPartMessage) {
@@ -240,13 +219,6 @@ func (handler *CmdHandler) HandleJoinMsg(msg twitch.UserJoinMessage) {
 	for _, fn := range onJoinSubscriptions {
 		fn(msg)
 	}
-}
-
-func IsMod(user twitch.User) bool {
-	_, bcOk := user.Badges["broadcaster"]
-	_, modOk := user.Badges["moderator"]
-	_, vipOk := user.Badges["vip"]
-	return bcOk || modOk || vipOk
 }
 
 // Show all the commands help text.. all of them... at once.
@@ -278,7 +250,6 @@ func (handler *CmdHandler) LoadAliases() {
 }
 
 func (handler *CmdHandler) RegisterAlias(alias, commandName string) error {
-	fmt.Println(commandName)
 	if _, ok := handler.aliases[alias]; ok {
 		return errors.New("alias already exists")
 	}
@@ -288,11 +259,9 @@ func (handler *CmdHandler) RegisterAlias(alias, commandName string) error {
 }
 
 func (handler *CmdHandler) RemoveAlias(alias string) bool {
-	fmt.Println("trying to remove ", alias)
 	if _, ok := handler.aliases[alias]; !ok {
 		return false
 	}
-	delete(handler.Commands, alias)
 	delete(handler.aliases, alias)
 	handler.saveAliasesToFile()
 	return true
@@ -323,6 +292,13 @@ func (handler *CmdHandler) InjectAliases(message string) string {
 
 func GetCommandMap() *map[string]Command {
 	return &cmdHandler.Commands
+}
+
+func IsMod(user twitch.User) bool {
+	_, bcOk := user.Badges["broadcaster"]
+	_, modOk := user.Badges["moderator"]
+	_, vipOk := user.Badges["vip"]
+	return bcOk || modOk || vipOk
 }
 
 func SubscribeUserPart(f func(twitch.UserPartMessage)) {
@@ -453,6 +429,46 @@ func CheckArgsCB(args []string, count int, callback func(string), argStruct inte
 	return true, nil
 }
 
+func RegisterCommand(pattern string, c Command) error {
+	return cmdHandler.RegisterCommand(pattern, c)
+}
+
 func SetMobileStream(b bool) {
 	mobileStream = b
+}
+
+func remind(msg twitch.PrivateMessage) {
+	if !IsMod(msg.User) {
+		return
+	}
+	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
+	if len(args) < 3 {
+		comm.ToChat(msg.Channel, "Not enough args for the thing you wanted to do which wa")
+		return
+	}
+	duration, err := time.ParseDuration(args[1])
+	if err != nil {
+		comm.ToChat(msg.Channel, "Duration is an invalid time duration deal with it")
+		return
+	}
+	message := strings.Join(args[2:], " ")
+	go func() {
+		time.Sleep(duration)
+		comm.ToOverlay(fmt.Sprintf("tts false true %s", message))
+	}()
+}
+
+func roll(msg twitch.PrivateMessage) {
+	// just 1-100 for now
+	roll := rand.Intn(100) + 1
+	comm.ToChat(msg.Channel, fmt.Sprintf("@%s rolled a %d out of 100", msg.User.DisplayName, roll))
+}
+
+func toggleMobileStreamMode(msg twitch.PrivateMessage) {
+	mobileStream = !mobileStream
+	s := "disabled"
+	if mobileStream {
+		s = "enabled"
+	}
+	comm.ToChat(msg.Channel, fmt.Sprintf("Mobile stream %s", s))
 }
