@@ -19,6 +19,11 @@ type Plinko struct {
 	running bool
 }
 
+const (
+	superPlinkoChance     = 100
+	superPlinkoMultiplier = 5
+)
+
 var plinko *Plinko = &Plinko{}
 var autoCancel context.CancelFunc
 
@@ -79,38 +84,21 @@ func (p *Plinko) Run(msg twitch.PrivateMessage) {
 		}
 		cost := 1
 		drop, err := strconv.Atoi(args[2])
-		if err != nil {
-			if args[2] == "all" && numTokens.Cmp(big.NewInt(5)) == 1 || numTokens.Cmp(big.NewInt(5)) == 0 {
-				cost = 5
-			} else {
-				return
-			}
-		}
-		if drop < 0 || drop > 4 {
+		if err != nil || drop < 0 || drop > 4 {
+			comm.ToChat(msg.Channel, fmt.Sprintf("Invalid drop zone specified for Plinko. Valid drop zones are 0, 1, 2, 3, or 4"))
 			return
 		}
 		DeductTokens(msg.User.Name, big.NewInt(int64(cost)))
-		comm.ToOverlay(fmt.Sprintf("plinko drop %s %s %s", args[2], msg.User.DisplayName, userColor))
+		if rand.Intn(superPlinkoChance) == 0 {
+			cost *= superPlinkoMultiplier
+			comm.ToChat(msg.Channel, fmt.Sprintf("WOW, %s got a Super Plinko token worth 5x! Good luck!", msg.User.DisplayName))
+		}
+		comm.ToOverlay(fmt.Sprintf("plinko drop %s %s %s %d", args[2], msg.User.DisplayName, userColor, cost))
 		return
 	}
 
-	if args[1] == "super" && len(args) >= 4 {
-		n := big.NewInt(0)
-		_, err := fmt.Sscan(args[3], n)
-		if err != nil {
-			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, invalid token amount. Please try again", msg.User.DisplayName))
-			return
-		}
-		drop, err := strconv.Atoi(args[2])
-		if err != nil || drop < 0 || drop > 4 {
-			return
-		}
-		if count := GetTokenCount(msg.User); count.Cmp(n) == -1 {
-			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, you only have %d tokens. Can't wager %d.", msg.User.DisplayName, count, n))
-			return
-		}
-		DeductTokens(msg.User.Name, n)
-		comm.ToOverlay(fmt.Sprintf("plinko drop %s %s %s %d", args[2], msg.User.DisplayName, userColor, n))
+	if args[1] == "super" {
+		comm.ToChat(msg.Channel, fmt.Sprintf("@%s: It is with much regret and sadness that I must inform you that Super Plinko has been disabled. It does live on in other ways though.", msg.User.DisplayName))
 	}
 }
 
@@ -154,6 +142,7 @@ func (p *Plinko) Help() []string {
 		"!plinko drop [number] to drop a token at the specified drop point",
 		"!plinko drop all will drop a token at each drop point",
 		"Each token costs one token.",
-		"!plinko super [number] [wager] will drop a token for the wagered amount",
+		"1 in 100 chance to get a Super Plinko token worth 5x!",
+		//	"!plinko super [number] [wager] will drop a token for the wagered amount",
 	}
 }
