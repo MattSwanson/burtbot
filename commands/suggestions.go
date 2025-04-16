@@ -101,7 +101,7 @@ func (sb *SuggestionBox) Run(msg twitch.PrivateMessage) {
 
 	if args[1] == "all" {
 		for _, suggestion := range sb.Suggestions {
-			comm.ToOverlay(fmt.Sprintf("tts %s suggested that we %s", suggestion.Username, suggestion.Text))
+			comm.ToOverlay(fmt.Sprintf("tts true true %s suggested that we %s", suggestion.Username, suggestion.Text))
 		}
 	}
 }

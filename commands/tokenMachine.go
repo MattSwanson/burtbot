@@ -323,7 +323,7 @@ func (t *TokenMachine) kick(msg *twitch.PrivateMessage) {
 
 func (t *TokenMachine) Help() []string {
 	return []string{
-		"!tokenmachine buy to buy tokens with hard earned burtcoin",
+		"!tokenmachine buy [amount] to buy tokens with hard earned burtcoin",
 		fmt.Sprintf("Get %d tokens for one burtcoin", tokenRate),
 		"!tokenmachine balance to see how many tokens you have. For now.",
 		"!tokenmachine give [user] [amount] to give that user that amount of tokens out your own pocket.",

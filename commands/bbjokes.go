@@ -48,7 +48,7 @@ func (j *Joke) Run(msg twitch.PrivateMessage) {
 	}
 	args := strings.Fields(strings.ToLower(strings.TrimPrefix(msg.Message, "!")))
 	if len(args) == 1 {
-		j.TellJoke(msg, false)
+		j.TellJoke(msg, false, false)
 		return
 	}
 
@@ -80,7 +80,7 @@ func (j *Joke) Run(msg twitch.PrivateMessage) {
 			canOverload = true
 		}()
 		for i := 0; i < 100; i++ {
-			j.TellJoke(msg, true)
+			j.TellJoke(msg, true, true)
 		}
 	}
 }
@@ -90,7 +90,7 @@ func unlockJoke() {
 	jokeLock = false
 }
 
-func (j *Joke) TellJoke(msg twitch.PrivateMessage, voiceOnly bool) {
+func (j *Joke) TellJoke(msg twitch.PrivateMessage, voiceOnly, randomVoice bool) {
 	// Fetch a joke from icanhazdadjoke api
 	req, err := http.NewRequest("GET", "https://icanhazdadjoke.com", nil)
 	if err != nil {
@@ -116,7 +116,7 @@ func (j *Joke) TellJoke(msg twitch.PrivateMessage, voiceOnly bool) {
 
 	stripped := strings.ReplaceAll(r.Joke, "\n", " ")
 	if comm.IsConnectedToOverlay() {
-		comm.ToOverlay(fmt.Sprintf("tts true %s", stripped))
+		comm.ToOverlay(fmt.Sprintf("tts true %t %s", randomVoice, stripped))
 	}
 	// Some jokes have \r\n in them - I think we need to filter those out
 	if voiceOnly {
@@ -138,7 +138,7 @@ func (j *Joke) JokeMode(msg twitch.PrivateMessage) {
 				j.jokeMode = false
 				return
 			default:
-				j.TellJoke(msg, true)
+				j.TellJoke(msg, true, true)
 				time.Sleep(time.Second * 10)
 			}
 		}

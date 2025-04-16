@@ -220,46 +220,52 @@ var farming bool
 var lastFarm time.Time
 
 var availBosses = map[string]Boss{
-	"Andariel": Boss{
+	"andariel": Boss{
 		Name:     "Andariel",
 		TC:       "Andarielq (H)",
 		Cooldown: 15,
 		LastKill: make(map[string]time.Time),
 	},
-	"Baal": Boss{
+	"baal": Boss{
 		Name:     "Baal",
 		TC:       "Baalq (H)",
 		Cooldown: 50,
 		LastKill: make(map[string]time.Time),
 	},
-	"Mephisto": Boss{
+	"mephisto": Boss{
 		Name:     "Mephisto",
 		TC:       "Mephistoq (H)",
 		Cooldown: 20,
 		LastKill: make(map[string]time.Time),
 	},
-	"Diablo": Boss{
+	"diablo": Boss{
 		Name:     "Diablo",
 		TC:       "Diabloq (H)",
 		Cooldown: 40,
 		LastKill: make(map[string]time.Time),
 	},
-	"Cow King": Boss{
+	"cow king": Boss{
 		Name:     "Cow King",
 		TC:       "Cow King (H)",
 		Cooldown: 30,
 		LastKill: make(map[string]time.Time),
 	},
-	"Countess": Boss{
+	"countess": Boss{
 		Name:     "Countess",
 		TC:       "Countess (H)",
 		Cooldown: 25,
 		LastKill: make(map[string]time.Time),
 	},
-	"Pindleskin": Boss{
+	"pindleskin": Boss{
 		Name:     "Pindleskin",
 		TC:       "Act 5 (H) Super Cx",
 		Cooldown: 10,
+		LastKill: make(map[string]time.Time),
+	},
+	"duriel": Boss{
+		Name:     "Duriel",
+		TC:       "Durielq (H)",
+		Cooldown: 20,
 		LastKill: make(map[string]time.Time),
 	},
 }
@@ -546,7 +552,7 @@ func (d *d2) Run(msg twitch.PrivateMessage) {
 			comm.ToChat(msg.Channel, "Need to provide an approved boss to farm")
 			return
 		}
-		bossName := strings.Join(args[2:], " ")
+		bossName := strings.ToLower(strings.Join(args[2:], " "))
 		boss, ok := availBosses[bossName]
 		if !ok {
 			comm.ToChat(msg.Channel, fmt.Sprintf("%s is not available to farm.", bossName))
@@ -1140,6 +1146,6 @@ func (d *d2) Help() []string {
 	return []string{
 		"!d2 unique [item] - search for a unique item",
 		"!d2 farm [boss] - farm a boss for epic loots",
-		"Available bosses: Andariel, Mephisto, Diablo, Baal",
+		"Available bosses: Andariel, Mephisto, Diablo, Baal, Duriel",
 	}
 }

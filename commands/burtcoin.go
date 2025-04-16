@@ -69,6 +69,9 @@ func (bc *BurtCoin) startSaveTimer(ctx context.Context) {
 
 func (bc *BurtCoin) Run(msg twitch.PrivateMessage) {
 	args := strings.Fields(strings.TrimPrefix(msg.Message, "!"))
+	if len(args) < 2 {
+		return
+	}
 	if args[1] == "give" {
 		if len(args) < 4 {
 			return

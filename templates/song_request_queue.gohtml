@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BB Song Request Queue</title>
+</head>
+<body>
+
+    <h2>The BurtBot song request queue 3000</h2>
+    <input id="autoplay-cb" type="checkbox" />
+    <label for="autoplay-cb">Autoplay Enabled</label>
+    <input id="spotifyToken" type="hidden" value="{{ .SpotifyToken }}"/>
+    <ul id="requestQueue"></ul>
+    <ul id="lastPlayed">
+    </ul>
+    <div id="player"></div>
+    <button id="togglePlay">Toggle Play</button>
+    <script src="https://sdk.scdn.co/spotify-player.js"></script>
+    <script src="/static/js/request_queue.js" referrerpolicy="origin"></script>
+</body>
+</html>

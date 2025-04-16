@@ -21,7 +21,6 @@ func (m *Msg) PostInit() {
 }
 
 func (m *Msg) Run(msg twitch.PrivateMessage) {
-	return
 	if !IsMod(msg.User) {
 		return
 	}
@@ -31,7 +30,7 @@ func (m *Msg) Run(msg twitch.PrivateMessage) {
 		return
 	}
 	newMsg := strings.Join(args[1:], " ")
-	comm.ToOverlay(fmt.Sprintf("tts false %s", newMsg))
+	comm.ToOverlay(fmt.Sprintf("tts false false %s", newMsg))
 }
 
 func (m *Msg) Help() []string {

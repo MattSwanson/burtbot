@@ -18,13 +18,13 @@ import (
 )
 
 const (
-	cardCost = 10 // Cost in tokens for a bingo card
-	drawTime = 5  // Time between drawing numbers in seconds
+	cardCost = 0  // Cost in tokens for a bingo card
+	drawTime = 10 // Time between drawing numbers in seconds
 	waitTime = 30 // Time to wait before a round begins in seconds
 )
 
 var currentGame *Bingo = &Bingo{
-	hopper: []ball{},
+	hopper:  []ball{},
 	players: make(map[string]player),
 }
 var cardTpl *template.Template
@@ -37,11 +37,11 @@ func init() {
 }
 
 type Bingo struct {
-	hopper           []ball
-	drawnNumbers	 *btree.BTree
-	players          map[string]player
-	running          bool
-	drawCancelFunc   context.CancelFunc
+	hopper         []ball
+	drawnNumbers   *btree.BTree
+	players        map[string]player
+	running        bool
+	drawCancelFunc context.CancelFunc
 }
 
 type player struct {
@@ -68,7 +68,7 @@ func (b *Bingo) Run(msg twitch.PrivateMessage) {
 			// person in line gets checked as so on
 			if b.validateWinner(msg.User.DisplayName) {
 				// winrar
-				numTokens := cardCost * len(b.players)
+				numTokens := 10 * len(b.players)
 				comm.ToChat(msg.Channel, fmt.Sprintf("@%s has Bingo! They win %d tokens!", msg.User.DisplayName, numTokens))
 				comm.ToOverlay(fmt.Sprintf("bingo winner %s %d", msg.User.DisplayName, numTokens))
 				// alot tokens to winrar
@@ -97,11 +97,11 @@ func (b *Bingo) Run(msg twitch.PrivateMessage) {
 		}
 
 		// check to see if they have enough tokens
-		if !DeductTokens(msg.User.DisplayName, big.NewInt(cardCost)) {
-			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, bingo cards cost %d tokens. You have only %d.", 
+		/*if !DeductTokens(msg.User.DisplayName, big.NewInt(cardCost)) {
+			comm.ToChat(msg.Channel, fmt.Sprintf("@%s, bingo cards cost %d tokens. You have only %d.",
 				msg.User.DisplayName, cardCost, GetTokenCount(msg.User)))
 			return
-		}
+		}*/
 		url, err := b.userJoined(msg.User.DisplayName)
 		if err != nil {
 			GrantToken(msg.User.DisplayName, big.NewInt(cardCost))
@@ -130,64 +130,64 @@ func (b *Bingo) PostInit() {
 }
 
 func (b *Bingo) Start(channelName string) {
-		b.running = true
-		if b.drawCancelFunc != nil {
-			b.drawCancelFunc()
+	b.running = true
+	if b.drawCancelFunc != nil {
+		b.drawCancelFunc()
+	}
+	comm.ToOverlay("bingo reset")
+	rand.Seed(time.Now().UnixNano())
+	b.players = map[string]player{}
+	b.fillHopper()
+	b.drawnNumbers.Clear(false)
+	b.drawnNumbers.ReplaceOrInsert(btree.Int(0))
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	b.drawCancelFunc = cancelFunc
+	go func(ctx context.Context, chatChannel string) {
+		comm.ToChat(chatChannel, fmt.Sprintf("A new round of bingo will start in %d seconds.", waitTime))
+		comm.ToChat(chatChannel, fmt.Sprintf("Type !bingo join to buy a card for %d tokens.", cardCost))
+		// Wait 30 seconds for people to join before starting
+		time.Sleep(time.Second * waitTime)
+		if b.running {
+			comm.ToChat(chatChannel, "Bingo will now commence.")
 		}
-		comm.ToOverlay("bingo reset")
-		rand.Seed(time.Now().UnixNano())
-		b.players = map[string]player{}
-		b.fillHopper()
-		b.drawnNumbers.Clear(false)
-		b.drawnNumbers.ReplaceOrInsert(btree.Int(0))
-		ctx, cancelFunc := context.WithCancel(context.Background())
-		b.drawCancelFunc = cancelFunc
-		go func(ctx context.Context, chatChannel string) {
-			comm.ToChat(chatChannel, fmt.Sprintf("A new round of bingo will start in %d seconds.", waitTime))
-			comm.ToChat(chatChannel, fmt.Sprintf("Type !bingo join to buy a card for %d tokens.", cardCost))
-			// Wait 30 seconds for people to join before starting
-			time.Sleep(time.Second * waitTime)
-			if b.running {
-				comm.ToChat(chatChannel, "Bingo will now commence.")
-			}
-			t := time.NewTicker(time.Second * drawTime)
-			defer t.Stop()
-			for {
-				select {
-				case <-ctx.Done():
+		t := time.NewTicker(time.Second * drawTime)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				if len(b.hopper) <= 0 {
+					comm.ToChat(chatChannel, "There are no balls left... is anyone even paying attention?")
+					comm.ToChat(chatChannel, "Looks like no one won bingo... starting another game soon")
+					b.Start(chatChannel)
 					return
-				case <-t.C:
-					if len(b.hopper) <= 0 {
-						comm.ToChat(chatChannel, "There are no balls left... is anyone even paying attention?")
-						comm.ToChat(chatChannel, "Looks like no one won bingo... starting another game soon")
-						b.Start(chatChannel)
-						return
-					}
-					drawn := b.drawBall()
-					b.drawnNumbers.ReplaceOrInsert(btree.Int(drawn))
-					// send a message to the overlay
-					// with the drawn number
-					letter := ""
-					switch {
-						case drawn <= 15:
-							letter = "B"
-							break
-						case drawn <= 30:
-							letter = "I"
-							break
-						case drawn <= 45:
-							letter = "N"
-							break
-						case drawn <= 60:
-							letter = "G"
-							break
-						default:
-							letter = "O"
-					}
-					comm.ToOverlay(fmt.Sprintf("bingo drawn %s%d", letter, drawn))
 				}
+				drawn := b.drawBall()
+				b.drawnNumbers.ReplaceOrInsert(btree.Int(drawn))
+				// send a message to the overlay
+				// with the drawn number
+				letter := ""
+				switch {
+				case drawn <= 15:
+					letter = "B"
+					break
+				case drawn <= 30:
+					letter = "I"
+					break
+				case drawn <= 45:
+					letter = "N"
+					break
+				case drawn <= 60:
+					letter = "G"
+					break
+				default:
+					letter = "O"
+				}
+				comm.ToOverlay(fmt.Sprintf("bingo drawn %s%d", letter, drawn))
 			}
-		}(ctx, channelName)
+		}
+	}(ctx, channelName)
 
 }
 
@@ -242,33 +242,33 @@ func (b *Bingo) userJoined(username string) (string, error) {
 
 func (b *Bingo) validateWinner(username string) bool {
 
-	if b.drawnNumbers.Has(btree.Int(b.players[username].card[0])) && 
-	   b.drawnNumbers.Has(btree.Int(b.players[username].card[6])) && 
-	   b.drawnNumbers.Has(btree.Int(b.players[username].card[18])) && 
-	   b.drawnNumbers.Has(btree.Int(b.players[username].card[24])) {
+	if b.drawnNumbers.Has(btree.Int(b.players[username].card[0])) &&
+		b.drawnNumbers.Has(btree.Int(b.players[username].card[6])) &&
+		b.drawnNumbers.Has(btree.Int(b.players[username].card[18])) &&
+		b.drawnNumbers.Has(btree.Int(b.players[username].card[24])) {
 		return true
 	}
-	if b.drawnNumbers.Has(btree.Int(b.players[username].card[4])) && 
-	   b.drawnNumbers.Has(btree.Int(b.players[username].card[8])) && 
-	   b.drawnNumbers.Has(btree.Int(b.players[username].card[16])) && 
-	   b.drawnNumbers.Has(btree.Int(b.players[username].card[20])) {
+	if b.drawnNumbers.Has(btree.Int(b.players[username].card[4])) &&
+		b.drawnNumbers.Has(btree.Int(b.players[username].card[8])) &&
+		b.drawnNumbers.Has(btree.Int(b.players[username].card[16])) &&
+		b.drawnNumbers.Has(btree.Int(b.players[username].card[20])) {
 		return true
 	}
 	for i := 0; i <= 4; i++ {
-		if b.drawnNumbers.Has(btree.Int(b.players[username].card[i])) && 
-		   b.drawnNumbers.Has(btree.Int(b.players[username].card[i+5])) && 
-		   b.drawnNumbers.Has(btree.Int(b.players[username].card[i+10])) && 
-		   b.drawnNumbers.Has(btree.Int(b.players[username].card[i+15])) && 
-		   b.drawnNumbers.Has(btree.Int(b.players[username].card[i+20])) {
+		if b.drawnNumbers.Has(btree.Int(b.players[username].card[i])) &&
+			b.drawnNumbers.Has(btree.Int(b.players[username].card[i+5])) &&
+			b.drawnNumbers.Has(btree.Int(b.players[username].card[i+10])) &&
+			b.drawnNumbers.Has(btree.Int(b.players[username].card[i+15])) &&
+			b.drawnNumbers.Has(btree.Int(b.players[username].card[i+20])) {
 			return true
 		}
 	}
 	for i := 0; i <= 20; i += 5 {
-		if b.drawnNumbers.Has(btree.Int(b.players[username].card[i])) && 
-		   b.drawnNumbers.Has(btree.Int(b.players[username].card[i+1])) && 
-		   b.drawnNumbers.Has(btree.Int(b.players[username].card[i+2])) && 
-		   b.drawnNumbers.Has(btree.Int(b.players[username].card[i+3])) && 
-		   b.drawnNumbers.Has(btree.Int(b.players[username].card[i+4])) {
+		if b.drawnNumbers.Has(btree.Int(b.players[username].card[i])) &&
+			b.drawnNumbers.Has(btree.Int(b.players[username].card[i+1])) &&
+			b.drawnNumbers.Has(btree.Int(b.players[username].card[i+2])) &&
+			b.drawnNumbers.Has(btree.Int(b.players[username].card[i+3])) &&
+			b.drawnNumbers.Has(btree.Int(b.players[username].card[i+4])) {
 			return true
 		}
 	}
@@ -281,7 +281,7 @@ func DisplayCards(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	username := r.FormValue("user")
-	p, ok := currentGame.players[username]; 
+	p, ok := currentGame.players[username]
 	if !ok {
 		http.Error(w, "I'm a teapot", http.StatusTeapot)
 		return

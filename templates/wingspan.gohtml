@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Wingspan Birds</title>
+    <style>
+        body {
+            font-family: monospace;
+            background-color: #333;
+        }
+        h1, ul, td, th{
+            color: slategrey;
+        }
+        a {
+            color: darkkhaki;
+        }
+
+        tr:hover td {
+            background-color: beige;
+        }
+        
+    </style>
+</head>
+
+<body>
+    <h1>Unplayed Birds</h1>
+    <table>
+        <tr>
+            <th>Core</th>
+            <th>European</th>
+            <th>Oceania</th>
+        </tr> 
+        <tr>
+            <td>{{ .Core }}</td> 
+            <td>{{ .European }}</td>
+            <td>{{ .Oceania }}</td>
+        </tr>
+    </table>
+    <table>
+        <tr>
+            <th>Common Name</th> 
+            <th>Scientific Name</th>
+            <th>Set</th>
+            <th>Color</th>
+            <th>Predator</th>
+            <th>Power Text</th>
+            <th>Has Played</th>
+            <th>Mark Played</th>
+        </tr> 
+        {{ range .Unplayed }}
+            <tr>
+                <td>{{ .CommonName }}</td>
+                <td>{{ .ScientificName }}</td>
+                <td>{{ .Set }}</td>
+                <td>{{ .Color }}</td>
+                <td>{{ .IsPredator }}</td>
+                <td>{{ .PowerText }}</td>
+                <td>{{ .HasPlayed }}</td>
+                <td><a href="/bird_played?id={{ .ID }}">Played</a></td>
+            </tr>
+        {{ end }}
+    </table>
+</body>
+</html>
