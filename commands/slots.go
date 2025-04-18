@@ -31,6 +31,8 @@ func (s *Slots) Run(msg twitch.PrivateMessage) {
 	}
 
 	switch args[1] {
+	case "kick":
+		comm.ToOverlay("slots kick")
 	case "pull":
 		if s.isRunning {
 			comm.ToChat(msg.Channel, fmt.Sprintf("Someone is already using the slots, please wait your turn patiently and don't complain about anything. If you really need to complain, direct it at @%s since they are the one who is holding everything up.", s.currentUser))
