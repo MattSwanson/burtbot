@@ -103,6 +103,10 @@ func (p *Plinko) Run(msg twitch.PrivateMessage) {
 }
 
 func (p *Plinko) HandleResponse(args []string) {
+	if len(args) > 2 && args[1] == "secondChance" {
+		comm.ToChat("burtstanton", fmt.Sprintf("@%s got a free second chance token! Wow!", args[2]))
+		return
+	}
 	n := big.NewInt(0)
 	_, err := fmt.Sscan(args[3], n)
 	if err != nil {

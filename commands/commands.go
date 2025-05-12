@@ -1,7 +1,3 @@
-//TODO:
-// Commands should have their own init section for setup to keep things as modular as possible
-// Commands should also have fields for cooldowns, help, etc...
-
 package commands
 
 import (
@@ -55,10 +51,6 @@ type cmdHelp struct {
 	Aliases map[string]string
 }
 
-// type Command struct {
-// 	Run func(twitch.PrivateMessage)
-// }
-
 func init() {
 	http.HandleFunc("/commands", commandList)
 	helpTemplate = template.Must(template.ParseFiles("templates/help.gohtml"))
@@ -74,7 +66,6 @@ func (handler *CmdHandler) RegisterCommand(pattern string, c Command) error {
 	if _, ok := handler.Commands[pattern]; ok {
 		return errors.New("Command already registered with that pattern")
 	}
-	// c.Init()
 	handler.Commands[pattern] = c
 	return nil
 }

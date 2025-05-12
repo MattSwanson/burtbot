@@ -58,6 +58,11 @@ func ToChat(channelName string, msg string) {
 	chatClient.Say(channelName, msg)
 }
 
+func ToChatf(channelName, fmsg string, args ...interface{}) {
+	msg := fmt.Sprintf(fmsg, args...)
+	chatClient.Say(channelName, msg)
+}
+
 func listenOnInput() {
 	go func(c chan string) {
 		scanner := bufio.NewScanner(os.Stdin)

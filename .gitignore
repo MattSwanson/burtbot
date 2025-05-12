@@ -5,6 +5,7 @@
 *.dll
 *.so
 *.dylib
+*.csv
 
 # Test binary, built with `go test -c`
 *.test
@@ -20,3 +21,8 @@
 ideas
 burtbot
 bb_log
+bb_log.*
+burtbot-stable
+d2/
+setitems.txt
+uniqueitems.txt
